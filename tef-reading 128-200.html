@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>TEF Canada - Compréhension Écrite</title>
+    <style>
+        :root {
+            --bg: #f9f9fb;
+            --text: #2c3e50;
+            --primary: #3498db;
+            --correct: #27ae60;
+            --incorrect: #e74c3c;
+            --panel-bg: #ffffff;
+            --border: #e0e0e0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #app {
+            width: 100%;
+            max-width: 900px;
+            margin: 20px;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav-buttons button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-buttons button:hover {
+            opacity: 0.9;
+        }
+        .stats {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .passage-box {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            font-size: 18px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .question-box {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .option-btn {
+            background-color: var(--panel-bg);
+            border: 2px solid var(--border);
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            background-color: #f1f8ff;
+        }
+        .option-btn:disabled {
+            cursor: not-allowed;
+            color: #555;
+        }
+        .correct {
+            border-color: var(--correct) !important;
+            background-color: #eafaf1 !important;
+            color: #1d8348 !important;
+            font-weight: bold;
+        }
+        .incorrect {
+            border-color: var(--incorrect) !important;
+            background-color: #fdedec !important;
+            color: #922b21 !important;
+        }
+        .explanation-box {
+            display: none;
+            background-color: #fdfefe;
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            line-height: 1.5;
+        }
+        .explanation-box h4 {
+            margin-top: 0;
+        }
+        .vocab-list {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+        .footer-nav {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        .footer-nav button {
+            background-color: var(--text);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="header">
+        <div class="nav-buttons">
+            <button onclick="startMode('order')">Practice in Order</button>
+            <button onclick="startMode('random')">Random Question</button>
+            <button onclick="startMode('exam')">Full Exam Mode</button>
+            <button onclick="startMode('review')">Review My Mistakes</button>
+        </div>
+        <div class="stats" id="stats-display">
+            Score: 0 / 0 | Accuracy: 0%
+        </div>
+    </div>
+
+    <div id="quiz-container">
+        <div class="passage-box" id="passage-text"></div>
+        <div class="question-box" id="question-text"></div>
+        <div class="options" id="options-container"></div>
+        
+        <div class="explanation-box" id="explanation-container">
+            <h4 id="verdict-title"></h4>
+            <div id="explanation-text"></div>
+            <h4>Vocabulaire utile:</h4>
+            <ul class="vocab-list" id="vocab-list"></ul>
+        </div>
+
+        <div class="footer-nav">
+            <button id="prev-btn" class="hidden" onclick="prevQuestion()">[Previous]</button>
+            <span id="question-counter" style="align-self: center; font-weight: bold;"></span>
+            <button id="next-btn" class="hidden" onclick="nextQuestion()">[Next]</button>
+        </div>
+    </div>
+    
+    <div id="exam-summary" class="hidden passage-box">
+        <h2>Exam Completed</h2>
+        <p id="exam-results"></p>
+        <button onclick="startMode('review')" style="padding:10px; background:var(--primary); color:white; border:none; border-radius:5px; cursor:pointer;">Review Mistakes</button>
+    </div>
+</div>
+
+<script>
+    // Complete Database 127 to 200
+    const questions = [
+        {
+            id: 127,
+            passage: `Donnez en confiance\n\nSOS SAHEL est labellisée Don en confiance depuis 1997.\n\nL'essentiel de vos dons, soit 93% des fonds (1) ________ est alloué à des actions concrètes de soutien aux activités des populations du Sahel.\n\nNous sommes reconnus d'(2) ________ publique depuis 1984 et nous soutenons les communautés rurales du Sahel depuis 45 ans.`,
+            question: `127. (1)`,
+            options: [`A. remboursés`, `B. ramassés`, `C. regroupés`, `D. collectés`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe terme « collectés » est le vocabulaire approprié dans le domaine associatif. Il fait directement référence à la levée de fonds (fonds recueillis grâce à des dons).`,
+            vocabulary: [`fonds collectés → raised funds`, `alloué à → allocated to`]
+        },
+        {
+            id: 128,
+            passage: `Donnez en confiance\n\nSOS SAHEL est labellisée Don en confiance depuis 1997.\n\nL'essentiel de vos dons, soit 93% des fonds (1) _______, est alloué à des actions concrètes de soutien aux activités des populations du Sahel.\n\nNous sommes reconnus d'(2) _______ publique depuis 1984 et nous soutenons les communautés rurales du Sahel depuis 45 ans.`,
+            question: `128. (2)`,
+            options: [`A. initiative`, `B. origine`, `C. alliance`, `D. utilité`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\n« Utilité publique » est une expression courante et figée en français qui désigne une organisation reconnue d'intérêt général (Reconnue d'Utilité Publique - RUP).`,
+            vocabulary: [`d'utilité publique → of public interest / public utility`]
+        },
+        {
+            id: 129,
+            passage: `Conditions climatiques difficiles\n\nUne (1) ________ de neige s'est déclarée samedi sur le nord-est du Québec avec des vents violents. La vie quotidienne de centaines de personnes est toujours perturbée. Pour l'instant, les routes restent (2) ________ mais cette météo a déjà provoqué la fermeture des écoles.`,
+            question: `129. (1)`,
+            options: [`A. batterie`, `B. bataille`, `C. explosion`, `D. tempête`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe terme « tempête » (storm) est le seul mot approprié pour décrire une forte perturbation climatique avec de la neige et des vents violents.`,
+            vocabulary: [`tempête de neige → snowstorm / blizzard`]
+        },
+        {
+            id: 130,
+            passage: `Conditions climatiques difficiles\n\nUne (1) ________ de neige s'est déclarée samedi sur le nord-est du Québec avec des vents violents. La vie quotidienne de centaines de personnes est toujours perturbée. Pour l'instant, les routes restent (2) ________ mais cette météo a déjà provoqué la fermeture des écoles.`,
+            question: `130. (2)`,
+            options: [`A. ouvertes`, `B. pratiques`, `C. courbées`, `D. réalisables`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe mot « ouvertes » convient ici pour indiquer que les routes ne sont pas encore fermées, ce qui crée un contraste avec les écoles qui, elles, ont fermé (« ...mais cette météo a déjà provoqué la fermeture des écoles »).`,
+            vocabulary: [`routes ouvertes → open roads`]
+        },
+        {
+            id: 131,
+            passage: `Salut Justine ! J'ai besoin d'un marteau pour _____ mes peintures, pourrais-tu me prêter le tien ?`,
+            question: `131. Complétez la phrase :`,
+            options: [`A. attacher`, `B. étendre`, `C. retenir`, `D. accrocher`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe contexte suggère que la personne veut suspendre des cadres/peintures sur un mur à l'aide d'un marteau (pour planter un clou). Le verbe « accrocher » est le verbe naturel pour suspendre un tableau.`,
+            vocabulary: [`marteau → hammer`, `accrocher → to hang (up)`]
+        },
+        {
+            id: 133,
+            passage: `En raison des vacances, la boulangerie sera ______ jusqu'à lundi prochain !`,
+            question: `133. Complétez la phrase :`,
+            options: [`A. louée`, `B. habitée`, `C. occupée`, `D. fermée`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe contexte indique une interruption de service due à des congés. Le mot « fermée » (closed) est le seul logique pour un commerce en période de vacances.`,
+            vocabulary: [`fermée → closed`]
+        },
+        {
+            id: 134,
+            passage: `Venez découvrir l'immensité des espaces blancs et l'accueil _____ de nos habitants !`,
+            question: `134. Complétez la phrase :`,
+            options: [`A. chaleureux`, `B. sensible`, `C. intimiste`, `D. contenu`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'expression « accueil chaleureux » est une collocation très fréquente en français. Elle évoque un accueil amical et bienveillant, contrastant joliment avec la froideur des « espaces blancs » (neige).`,
+            vocabulary: [`accueil chaleureux → warm welcome`]
+        },
+        {
+            id: 135,
+            passage: `Madame, Monsieur,\nNous vous rappelons que certaines œuvres sont soumises au droit d'auteur. Pour pouvoir les reproduire ou les diffuser sur notre plateforme, nous vous demandons de bien vouloir effectuer une déclaration lors de chaque commande d'impression ou de mise en ligne.\nCette déclaration se fait en ligne, est anonyme et ne demandera aucune rétribution de votre part. Vous devrez néanmoins indiquer le numéro de votre commande.\nATTENTION ! Sans ces indications, vos demandes ne pourront être traitées.\nBien cordialement,\nDirection de la Communication, Université Sorbonne Nouvelle`,
+            question: `135. Ce mail rappelle :`,
+            options: [`A. l'interdiction de copier les œuvres`, `B. le délai de traitement des commandes`, `C. l'obligation de payer les droits d'auteur`, `D. les règles d'utilisation des œuvres`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe message n'interdit pas de copier, ni ne demande d'argent (« aucune rétribution »). Il explique simplement la procédure à suivre (faire une déclaration en ligne) pour utiliser légalement des œuvres protégées. Il s'agit donc d'un rappel des règles d'utilisation.`,
+            vocabulary: [`soumises au droit d'auteur → subject to copyright`, `rétribution → payment / compensation`]
+        },
+        {
+            id: 136,
+            passage: `Vous souhaitez agir pour préserver notre climat, pour rendre notre société plus écologique et solidaire ?\nAu festival « Agir à Lyon », vous pourrez rencontrer une trentaine d'associations avec qui devenir bénévole. À travers une dizaine de mini-conférences, vous découvrirez des projets inspirants pour vous donner envie de mettre l'écologie au centre de votre mode de vie.\nNous vous inviterons, par des démonstrations simples, à découvrir des actions à faire chez soi ou autour de soi : compostage, cuisine anti-gaspillage, etc.`,
+            question: `136. Le but de l'événement est de :`,
+            options: [`A. découvrir des activités écologiques`, `B. rencontrer des scientifiques`, `C. créer de nouvelles associations`, `D. ramasser les déchets d'un quartier`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte insiste sur la découverte de projets écologiques (mini-conférences) et de gestes simples à faire soi-même (compostage, anti-gaspillage). L'objectif global est donc la découverte de pratiques et d'activités en lien avec l'écologie.`,
+            vocabulary: [`bénévole → volunteer`, `anti-gaspillage → zero-waste / anti-waste`]
+        },
+        {
+            id: 137,
+            passage: `Professeur au Conservatoire de Montréal donne des\nCOURS DE CHANT\nTechniques italienne et française\nOpéra — Chanson française - Opérette\nSessions d'une semaine à six mois\nProgrès rapides garantis !\nTel. : 514-873-4283`,
+            question: `137. Ce document propose :`,
+            options: [`A. un enseignement de qualité`, `B. une place à l'Opéra`, `C. un poste en Italie`, `D. une semaine de concerts`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nIl s'agit d'une annonce pour des cours de chant donnés par un « Professeur au Conservatoire ». Cela garantit une certaine expertise, et l'annonce promet des « progrès rapides ». C'est donc une offre d'enseignement.`,
+            vocabulary: [`cours de chant → singing lessons`]
+        },
+        {
+            id: 138,
+            passage: `L'Asie du Sud au cinéma !\nLe festival « Cinéasia » présente en Belgique des films de toute l'Asie du Sud.\nL'Inde et ses voisins seront parmi nous et une journée sera dédiée au Pakistan.\nL'an dernier, vous avez adoré notre nuit « Frissons ». Cette année, vous allez rire avec notre nuit « Comédies » ! Venez nombreux !`,
+            question: `138. Le programme du festival :`,
+            options: [`A. est le même que l'an dernier`, `B. reste encore à définir`, `C. est renouvelé chaque année`, `D. est destiné aux plus jeunes`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte compare explicitement l'édition précédente (« l'an dernier... nuit Frissons ») avec la nouvelle (« cette année... nuit Comédies »). Cela démontre que le programme change d'une année sur l'autre (il est renouvelé).`,
+            vocabulary: [`renouvelé → renewed / updated`]
+        },
+        {
+            id: 139,
+            passage: `JF 20 ans étudiante en formation « petite enfance », sérieuse avec beaucoup d'expérience, propose garde d'enfants (de 2 à 10 ans) les soirs, les mercredis et les dimanches.\nSi vous êtes intéressé(e), contactez-moi :\n232-21-18-14 ou adele@lilo.org`,
+            question: `139. L'auteure de cette annonce est disponible :`,
+            options: [`A. en début de journée`, `B. plusieurs fois par semaine`, `C. une fois par semaine`, `D. seulement le weekend`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'étudiante est disponible « les soirs, les mercredis et les dimanches », ce qui couvre plusieurs moments distincts répartis au cours de la semaine.`,
+            vocabulary: [`garde d'enfants → babysitting / childcare`]
+        },
+        {
+            id: 140,
+            passage: `Pour une ville propre !\nLa ville de Bruges ramasse chaque année 18 tonnes de cigarettes jetées au sol.\nUn mégot par terre : 68 euros d'amende !`,
+            question: `140. Ce document est :`,
+            options: [`A. un règlement intérieur`, `B. un panneau d'information`, `C. un dépliant touristique`, `D. une offre d'emploi`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe format direct, les chiffres chocs (18 tonnes) et la menace d'une amende (68 euros) sont typiques d'une campagne de sensibilisation municipale affichée dans l'espace public (un panneau d'information).`,
+            vocabulary: [`mégot → cigarette butt`, `amende → fine`]
+        },
+        {
+            id: 141,
+            passage: `Adriana et Luis ont l'immense joie de vous annoncer que leur petite Agathe est arrivée au monde le 12 juin à 14h33 précises !\nDu haut de ses 52 cm et 3,250 kg, elle est devenue la princesse de la maison !`,
+            question: `141. Ce document annonce :`,
+            options: [`A. un repas de famille`, `B. un goûter d'anniversaire`, `C. la naissance d'un enfant`, `D. la date d'un mariage`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLes expressions « est arrivée au monde » (born) et les mensurations typiques d'un bébé (52 cm, 3,250 kg) indiquent très clairement l'annonce d'une naissance (un faire-part).`,
+            vocabulary: [`est arrivée au monde → came into the world / was born`]
+        },
+        {
+            id: 142,
+            passage: `Séance de conseil\nLundi, le 6 avril — 19h30\n— Ouverture de la séance\n— Rapport des comités et du Maire\n— Rapport du Directeur général\n— Intervention du public\n— Acceptation des salaires\nRésolutions :\n+ Administration\n+ Travaux publics\n+ Urbanisme et développement\n+ Information des membres du Conseil\n+ Période de questions\n+ Levée de la séance\nProchaine séance régulière : le 4 mai à 19h30`,
+            question: `142. Ce document présente :`,
+            options: [`A. un ordre du jour`, `B. un emploi du temps`, `C. un guide technique`, `D. un programme de cours`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nCe document liste les différents points séquentiels à discuter lors d'une réunion officielle (ouverture, rapports, résolutions, levée de séance). Cela s'appelle un « ordre du jour » (agenda).`,
+            vocabulary: [`ordre du jour → agenda (for a meeting)`, `levée de la séance → adjournment of the meeting`]
+        },
+        {
+            id: 143,
+            passage: `PASSION GASTRONOMIE !\nLe restaurant gastronomique québécois La Folle Fourchette multiplie les cours s'adressant autant aux petits qu'aux grands.\nOn vous propose d'explorer les techniques de base, les spécialités culinaires, la confection de pâtes fraîches, la cuisine végétarienne, régionale, etc.\n« Notre offre varie selon les saisons et selon certaines thématiques (les récoltes, Noël...) », expliquent les propriétaires. « On va bientôt proposer une introduction aux fromages espagnols ! ».\nConsultez l'offre et inscrivez-vous vite car les places sont limitées !`,
+            question: `143. Ce document propose de :`,
+            options: [`A. participer à des ateliers de cuisine.`, `B. s'inscrire à un concours gastronomique.`, `C. découvrir des spécialités locales.`, `D. confectionner un repas de Noël.`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte fait la promotion des « cours » proposés par le restaurant, où l'on explore des techniques (confection de pâtes, etc.). Participer à des ateliers de cuisine résume parfaitement cette offre globale.`,
+            vocabulary: [`confection → making / preparation`, `ateliers → workshops`]
+        },
+        {
+            id: 144,
+            passage: `Je vais me coucher, j'ai vraiment ______.`,
+            question: `144. Complétez la phrase :`,
+            options: [`A. faim`, `B. froid`, `C. sommeil`, `D. soif`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\n« Avoir sommeil » est l'expression idiomatique correcte en français pour exprimer que l'on est fatigué et prêt à dormir (to be sleepy).`,
+            vocabulary: [`avoir sommeil → to be sleepy`]
+        },
+        {
+            id: 145,
+            passage: `La luzerne, futur engrais de la planète rouge ? D'après les scientifiques, cette plante pourrait nous aider à ______ sur Mars.`,
+            question: `145. Complétez la phrase :`,
+            options: [`A. construire`, `B. survivre`, `C. circuler`, `D. respirer`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe contexte spatial (vivre sur Mars, utiliser un engrais) évoque la nécessité de pouvoir se nourrir pour rester en vie. Le verbe « survivre » est le plus logique.`,
+            vocabulary: [`engrais → fertilizer`, `survivre → to survive`]
+        },
+        {
+            id: 146,
+            passage: `Fécondité en baisse\nLe recours de plus en plus [1] à la contraception, et l'amélioration de la condition de la femme, ont été des facteurs clés de la transition de la fécondité.\nOn peut y voir une [2] démographique : ce phénomène permet de limiter la croissance de la population.`,
+            question: `146. (1)`,
+            options: [`A. massif`, `B. épais`, `C. frappant`, `D. imposant`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'adjectif « massif » s'associe couramment avec le nom « recours » pour désigner une utilisation très importante et généralisée (un recours massif) par une large partie de la population.`,
+            vocabulary: [`recours massif → massive use / widespread reliance`]
+        },
+        {
+            id: 147,
+            passage: `Fécondité en baisse\nLe recours de plus en plus [1] à la contraception, et l'amélioration de la condition de la femme, ont été des facteurs clés de la transition de la fécondité.\nOn peut y voir une [2] démographique : ce phénomène permet de limiter la croissance de la population.`,
+            question: `147. (2)`,
+            options: [`A. fierté`, `B. aubaine`, `C. puissance`, `D. fortune`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nUne « aubaine » désigne une chance inespérée ou une excellente opportunité. Limiter la croissance de la population est ici présenté comme une conséquence positive et bénéfique.`,
+            vocabulary: [`aubaine → godsend / boon / lucky break`]
+        },
+        {
+            id: 148,
+            passage: `Jour de vote\nInterrogés sur la proposition de Constitution, les Chiliens ont voté « non » a 62,2 %.\nIls ont massivement [1] l'instauration de nouveaux droits sociaux.\nDe longues files d'attente se sont étirées devant les bureaux de vote.\nLa journée de vote obligatoire, sous peine d'amende, s'est déroulée dans le calme et avec une forte [2] -`,
+            question: `148. (1)`,
+            options: [`A. annulé`, `B. modifié`, `C. rejeté`, `D. reporté`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nPuisqu'ils ont voté « non » à plus de 62%, cela signifie qu'ils ont refusé le texte. Le verbe « rejeté » est le terme exact pour signifier le refus lors d'un vote constitutionnel ou référendum.`,
+            vocabulary: [`rejeter → to reject`]
+        },
+        {
+            id: 149,
+            passage: `Jour de vote\nInterrogés sur la proposition de Constitution, les Chiliens ont voté « non » à 62,2 %.\nIls ont massivement [1] l'instauration de nouveaux droits sociaux.\nDe longues files d'attente se sont étirées devant les bureaux de vote.\nLa journée de vote obligatoire, sous peine d'amende, s'est déroulée dans le calme et avec une forte [2]`,
+            question: `149. (2)`,
+            options: [`A. négociation`, `B. réalisation`, `C. obligation`, `D. participation`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nDans le vocabulaire électoral, on parle de « forte participation » (turnout) pour indiquer que beaucoup de citoyens se sont déplacés pour voter (confirmé par « de longues files d'attente »).`,
+            vocabulary: [`forte participation → high turnout (in an election)`]
+        },
+        {
+            id: 150,
+            passage: `Quel film choisir pour un enfant aimant les courses et les animaux ?\nFilm 1\nMadame Souza offre un vélo à son neveu en vue du Tour de France...\nFilm 2\nFlash McQueen, une splendide voiture de course, découvre que dans la vie...\nFilm 3\nTurbo est un escargot qui n’a qu’un rêve : être incroyablement rapide ! Son obsession l'a rendu impopulaire...\nFilm 4\nPeng, canard énergique et blagueur, se blesse à force d'acrobaties...`,
+            question: `150. Quel film choisir pour un enfant aimant les courses et les animaux ?`,
+            options: [`A. Film 1`, `B. Film 2`, `C. Film 3`, `D. Film 4`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe Film 3 met en scène un animal (un escargot) dont l'obsession est la vitesse (courses). Il combine donc explicitement les deux thématiques exigées par la question.`,
+            vocabulary: [`escargot → snail`]
+        },
+        {
+            id: 151,
+            passage: `Lundi 4 septembre, j'ai pris le vol Paris-Montréal n°387GRT de la compagnie Air Voyage mais mes bagages ne sont jamais arrivés. J'ai téléphoné plusieurs fois à l'aéroport et on m'a dit de patienter. J'attends depuis déjà deux semaines et je n’ai aucune nouvelle !\nDe plus, l'employé de l'aéroport était incapable de m'expliquer pourquoi mes bagages avaient disparu et surtout, il était très désagréable. Je suis surpris de ce comportement !\nSi vous ne trouvez pas rapidement de solution à cette situation, je porterai plainte contre votre compagnie !`,
+            question: `151. Cette lettre a pour but de :`,
+            options: [`A. faire une réclamation.`, `B. critiquer les passagers.`, `C. licencier un employé.`, `D. dénoncer des retards.`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'auteur décrit un préjudice (perte de bagages, mauvais service), exprime son mécontentement et exige une solution sous peine de plainte. C'est la définition même d'une lettre de réclamation.`,
+            vocabulary: [`réclamation → complaint / claim`, `porter plainte → to press charges / to file a formal complaint`]
+        },
+        {
+            id: 152,
+            passage: `Lundi 4 septembre, j'ai pris le vol Paris-Montréal n°387GRT de la compagnie Air Voyage mais mes bagages ne sont jamais arrivés. J'ai téléphoné plusieurs fois à l'aéroport et on m'a dit de patienter. J'attends depuis déjà deux semaines et je n’ai aucune nouvelle !\nDe plus, l'employé de l'aéroport était incapable de m’expliquer pourquoi mes bagages avaient disparu et surtout, il était très désagréable. Je suis surpris de ce comportement !\nSi vous ne trouvez pas rapidement de solution a cette situation, je porterai plainte contre votre compagnie !`,
+            question: `152. Les bagages du client :`,
+            options: [`A. ont été refusés à l'enregistrement.`, `B. sont partis sur un autre vol.`, `C. dépassaient le poids autorisé`, `D. semblent avoir été perdus.`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe client dit explicitement « mes bagages ne sont jamais arrivés » et « avaient disparu ». Sans nouvelles après deux semaines, il est clair qu'ils semblent avoir été perdus.`,
+            vocabulary: [`disparu → disappeared`]
+        },
+        {
+            id: 153,
+            passage: `Chers parents,\nJe vous propose de détecter et analyser la source des problèmes d'apprentissage et/ou de comportement de votre enfant, afin d'éviter l'éventualité d'un échec scolaire.\nJe peux être amenée à intervenir dans les classes avec les enseignants, pour y observer votre enfant individuellement ou en petits groupes. Des entretiens privés pourront également être proposés, de même que la réalisation d’une évaluation psychologique.\nLe choix du mode d'intervention appartient au psychologue, mais fait toujours l'objet d'une analyse commune, réalisée avec la famille et l'équipe pédagogique.\nJe reste à votre disposition pour tout renseignement complémentaire.\nLa psychologue scolaire`,
+            question: `153. La psychologue scolaire propose :`,
+            options: [`A. d'accompagner les élèves en difficulté.`, `B. de soigner des pathologies psychologiques.`, `C. d'organiser des réunions pédagogiques.`, `D. de responsabiliser les enfants décrocheurs.`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLa psychologue propose d'intervenir face aux « problèmes d'apprentissage » pour éviter un « échec scolaire ». Cela correspond à accompagner des élèves en difficulté, sans pour autant parler de pathologie médicale grave ou de soin clinique pur.`,
+            vocabulary: [`échec scolaire → academic failure / dropping out`]
+        },
+        {
+            id: 154,
+            passage: `Chers parents,\nJe vous propose de détecter et analyser la source des problèmes d'apprentissage et/ou de comportement de votre enfant, afin d'éviter l'éventualité d'un échec scolaire.\nJe peux être amenée à intervenir dans les classes avec les enseignants, pour y observer votre enfant individuellement ou en petits groupes. Des entretiens privés pourront également être proposés, de même que la réalisation d'une évaluation psychologique.\nLe choix du mode d'intervention appartient au psychologue, mais fait toujours l'objet d'une analyse commune, réalisée avec la famille et l'équipe pédagogique.\nJe reste à votre disposition pour tout renseignement complémentaire.\nLa psychologue scolaire`,
+            question: `154. L'auteur précise que les familles.`,
+            options: [`A. seront amenées à consulter des spécialistes.`, `B. pourront s'informer via l'équipe pédagogique.`, `C. seront associées à toute intervention.`, `D. feront l'objet d'une expertise psychologique.`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte précise que le choix du mode d'intervention « fait toujours l'objet d'une analyse commune, réalisée avec la famille ». Les familles sont donc associées aux décisions.`,
+            vocabulary: [`être associé à → to be involved in`]
+        },
+        {
+            id: 155,
+            passage: `L'écrivain Paul Leroux répond au journaliste Arnaud Chapelle à la question : à quoi rêvez-vous ?\nJe rêve souvent de mes personnages et des histoires de mes romans. Le rêve me semble plus constructif que la vie [1] , peut-être parce qu'il y a plus d'espace, plus d'aisance. Il n’est pas rare que je me réveille le matin avec une solution d'écriture que je cherchais depuis quelques jours. L'inconscient fait bien son [2] :`,
+            question: `155. (1)`,
+            options: [`A. naturelle`, `B. consciente`, `C. actif`, `D. allégorique`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte oppose la période de rêve gérée par « l'inconscient » à la période d'éveil. L'adjectif correct pour s'opposer au rêve et à l'inconscient est la vie « consciente ».`,
+            vocabulary: [`vie consciente → conscious life / waking life`]
+        },
+        {
+            id: 156,
+            passage: `L'écrivain Paul Leroux répond au journaliste Arnaud Chapelle à la question : à quoi rêvez-vous ?\nJe rêve souvent de mes personnages et des histoires de mes romans. Le rêve me semble plus constructif que la vie [1] , peut-être parce qu'il y a plus d'espace, plus d'aisance. Il n’est pas rare que je me réveille le matin avec une solution d'écriture que je cherchais depuis quelques jours. L'inconscient fait bien son [2] :`,
+            question: `156. (2)`,
+            options: [`A. marché`, `B. boulot`, `C. malin`, `D. cirque`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'expression familière française est « faire bien son boulot » (to do its job well). Ici, l'inconscient fait son travail en trouvant des solutions d'écriture pendant le sommeil de l'auteur.`,
+            vocabulary: [`faire son boulot → to do one's job`]
+        },
+        {
+            id: 157,
+            passage: `Après avoir travaillé trois ans comme secrétaire, je vous envoie ma candidature pour intégrer votre entreprise. Dans mon travail précédent, j'ai développé toutes les compétences liées à mon métier : classement de données, organisation de rendez-vous et de voyages, gestion de l'agenda de la direction, etc.\nJ'ai un grand sens des priorités et de grandes capacités relationnelles. De plus, je suis motivée par la possibilité de travailler dans un environnement multiculturel. Parfaitement bilingue, je saurai réaliser mes missions auprès de vos clients français.`,
+            question: `157. La candidate a une expérience dans :`,
+            options: [`A. l'évènementiel`, `B. le suivi qualité`, `C. l'administration`, `D. l'accueil du public`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLes tâches décrites (classement de données, gestion de l'agenda, secrétariat) sont les tâches typiques du domaine administratif.`,
+            vocabulary: [`gestion de l'agenda → diary/schedule management`]
+        },
+        {
+            id: 158,
+            passage: `Après avoir travaillé trois ans comme secrétaire, je vous envoie ma candidature pour intégrer votre entreprise. Dans mon travail précédent, j'ai développé toutes les compétences liées à mon métier : classement de données, organisation de rendez-vous et de voyages, gestion de l'agenda de la direction, etc.\nJ'ai un grand sens des priorités et de grandes capacités relationnelles. De plus, je suis motivée par la possibilité de travailler dans un environnement multiculturel. Parfaitement bilingue, je saurai réaliser mes missions auprès de vos clients français.`,
+            question: `158. Dans cette entreprise, elle pourra :`,
+            options: [`A. utiliser ses connaissances en langues étrangères.`, `B. assister à des formations culturelles.`, `C. faire des déplacements professionnels.`, `D. participer au recrutement des employés.`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLa candidate mentionne qu'elle est « parfaitement bilingue » et motivée par un environnement « multiculturel ». Cela lui permettra d'utiliser ses compétences linguistiques étrangères.`,
+            vocabulary: [`bilingue → bilingual`]
+        },
+        {
+            id: 159,
+            passage: `Pensez-y !\nDans l'énumération des sujets à traiter, on veillera à ce que les divers points soient présentés de manière uniforme. De plus, pour éviter la confusion et les digressions, le libellé doit être suffisamment explicite pour engager correctement le débat. Ainsi, un point qui se lirait « Stationnement » ne serait pas assez clair. S'agit-il de dénoncer des actes de vandalisme, d'interdire le stationnement en hiver ? On y préférera par exemple : « Vandalisme dans le parc de stationnement », « Stationnement en hiver », etc. La précision dans les formulations facilite la tâche de la personne qui aura à faire le compte rendu de la réunion.`,
+            question: `159. Cet extrait a pour but de :`,
+            options: [`A. spécifier une procédure`, `B. détailler une fiche-métier`, `C. dresser un procès-verbal`, `D. réaliser un état des lieux`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte donne des instructions précises et méthodologiques (« on veillera à », « doit être suffisamment explicite ») pour rédiger l'ordre du jour d'une réunion. Il spécifie donc une procédure de travail.`,
+            vocabulary: [`libellé → wording`, `compte rendu → meeting minutes / report`]
+        },
+        {
+            id: 160,
+            passage: `Pensez-y !\nDans l'énumération des sujets à traiter, on veillera à ce que les divers points soient présentés de manière uniforme. De plus, pour éviter la confusion et les digressions, le libellé doit être suffisamment explicite pour engager correctement le débat. Ainsi, un point qui se lirait « Stationnement » ne serait pas assez clair. S'agit-il de dénoncer des actes de vandalisme, d'interdire le stationnement en hiver ? On y préférera par exemple : « Vandalisme dans le parc de stationnement », « Stationnement en hiver », etc. La précision dans les formulations facilite la tâche de la personne qui aura à faire le compte rendu de la réunion.`,
+            question: `160. Lors des réunions, les discussions sont efficaces si :`,
+            options: [`A. les participants sont enclins à collaborer`, `B. les tours de parole sont bien respectés`, `C. les documents ont été transmis en amont`, `D. l'ordre du jour a été soigneusement établi`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte insiste sur la qualité de « l'énumération des sujets à traiter » (l'ordre du jour) et sur la clarté des libellés pour « éviter la confusion et les digressions » et « engager correctement le débat ». Un ordre du jour bien rédigé garantit donc l'efficacité.`,
+            vocabulary: [`digressions → going off-topic`]
+        },
+        {
+            id: 161,
+            passage: `Entreprise Noyon\nTous travaux d'entretien de votre maison\n(bâtiment, intérieur, extérieur, jardin...)\nDevis gratuit\nwww.noyon.com`,
+            question: `161. Ce document est :`,
+            options: [`A. une facture`, `B. une annonce`, `C. un mode d'emploi`, `D. une offre d'emploi`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nCe texte court fait la promotion des services d'une entreprise (travaux d'entretien) et inclut une adresse de site web ainsi que la mention « devis gratuit ». Il s'agit d'une publicité/annonce.`,
+            vocabulary: [`devis gratuit → free estimate/quote`]
+        },
+        {
+            id: 162,
+            passage: `Concert de Lila TEKA à Lausanne\nLila TEKA et ses musiciens ont annoncé l'annulation de leur concert du samedi 7 novembre pour des raisons de santé et présentent toutes leurs excuses au public. La date de la reprogrammation sera bientôt communiquée.\nLes spectateurs sont invités à se faire rembourser dans leur point de vente habituel\nMerci de votre compréhension,\nLes organisateurs`,
+            question: `162. Suite à l'annulation de l'événement,`,
+            options: [`A. les places devront être revendues`, `B. le spectacle est reporté à une date inconnue`, `C. les organisateurs s'engagent à offrir un cadeau`, `D. les billets sont valables pour le prochain concert`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'annonce indique que « La date de la reprogrammation sera bientôt communiquée. » Cela signifie que le concert est reporté, mais que la nouvelle date n'est pas encore fixée/connue.`,
+            vocabulary: [`reprogrammation → rescheduling`]
+        },
+        {
+            id: 163,
+            passage: `Dans un quartier de prestige à Montréal.\nDu studio au 3 pièces entièrement équipés.\nPrès du métro et des autobus.\nDe 700 $ CA à 1650 $ CA/semaine pour juillet et août.\nÉcrire au journal sous la référence 6SLJ73.`,
+            question: `163. Ce document s'adresse à des personnes qui souhaitent :`,
+            options: [`A. échanger un logement pour les vacances`, `B. vendre un logement meublé`, `C. louer un appartement pour l'été`, `D. acheter un appartement luxueux`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe fait que le tarif soit indiqué « à la semaine pour juillet et août » montre qu'il s'agit d'une location de courte durée, typique d'un logement estival/de vacances.`,
+            vocabulary: [`entièrement équipés → fully equipped / furnished`]
+        },
+        {
+            id: 164,
+            passage: `Chacun de nous est régulièrement ______ et peut s'en trouver dérangé, ou pas, par des appels téléphoniques commerciaux.`,
+            question: `164. Complétez la phrase :`,
+            options: [`A. dérouté`, `B. sollicité`, `C. dépisté`, `D. obsédé`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe verbe « solliciter » s'emploie pour décrire l'action de démarcher ou de demander l'attention d'un client potentiel. Les appels commerciaux « sollicitent » les personnes.`,
+            vocabulary: [`sollicité → solicited / approached`]
+        },
+        {
+            id: 165,
+            passage: `Critique 1\nUn braquage de banque mené par des amateurs...\nCritique 2\nSur un répertoire de grands classiques connus, pimentés de quelques emprunts à la pop, Les Colocos se réunissent pour un moment festif. Porté par cinq véritables ténors d’opéra, ce récital nous offre des interprétations originales et pleines d'émotion !\nCritique 3\nTrois amis au cœur tendre...\nCritique 4\nNourri par la culture des années 90, l'humoriste SebMello livre un numéro...`,
+            question: `165. Quelle critique recommande un spectacle musical ?`,
+            options: [`A. Critique 1`, `B. Critique 2`, `C. Critique 3`, `D. Critique 4`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLa Critique 2 parle de « classiques connus », de « pop », de « ténors d'opéra » et d'un « récital ». Tous ces mots appartiennent au champ lexical de la musique et du chant.`,
+            vocabulary: [`récital → vocal or musical performance`, `ténors → tenors (singers)`]
+        },
+        {
+            id: 166,
+            passage: `Chers professeurs,\nJe reviens vers vous afin de vous demander de signer les trois annexes ci-jointes. Vous y trouverez les éléments qui manquaient jusqu’à présent dans vos contrats :\n— L’annexe 2 régule les annulations tardives par l'apprenant.\n—Lannexe 3 complète la grille tarifaire jointe à vos contrats et fait passer le tarif des cours en ligne au tarif unique et commun pour toutes les antennes de l'Institut français de notre pays.\n— L'annexe 4 régule les questions sur l'ancienneté de l'équipe enseignante.`,
+            question: `166. La personne écrit pour :`,
+            options: [`A. communiquer de nouvelles directives`, `B. modifier les conditions des congés`, `C. compléter les contrats des enseignants`, `D. demander de renvoyer les contrats`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'expéditeur précise explicitement : « Vous y trouverez les éléments qui manquaient jusqu’à présent dans vos contrats ». Il s'agit donc bien de compléter les documents administratifs contractuels des professeurs.`,
+            vocabulary: [`annexes ci-jointes → attached appendices / enclosures`]
+        },
+        {
+            id: 167,
+            passage: `Chers professeurs,\nJe reviens vers vous afin de vous demander de signer les trois annexes ci-jointes. Vous y trouverez les éléments qui manquaient jusqu’à présent dans vos contrats :\n— L’annexe 2 régule les annulations tardives par l'apprenant.\n—Lannexe 3 complète la grille tarifaire jointe à vos contrats et fait passer le tarif des cours en ligne au tarif unique et commun pour toutes les antennes de l'Institut français de notre pays.\n— L'annexe 4 régule les questions sur l'ancienneté de l'équipe enseignante.`,
+            question: `167. Le tarif des cours en ligne :`,
+            options: [`A. augmente avec le nombre d'apprenants`, `B. varie selon l'ancienneté de l'enseignant`, `C. diffère selon la taille de l'antenne`, `D. est identique pour tous les Instituts`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'Annexe 3 indique que le tarif passe à un « tarif unique et commun pour toutes les antennes de l'Institut français ». Unique et commun signifient identiques pour tous.`,
+            vocabulary: [`grille tarifaire → fee schedule / pricing scale`, `antennes → branches`]
+        },
+        {
+            id: 168,
+            passage: `Nouveau à Québec !\nCiné-débat le mardi à 19h00 à la Maison de la Famille\nProjection d'un film tout public suivi d’une discussion sur le sujet avec un spécialiste.\nLa première, c'est mardi 25 avril,\nAu programme : le long métrage Elle voulait bien faire\nDébat : Nos relations avec nos adolescents\nTél : +1 418-529-0263`,
+            question: `168. La Maison de la Famille propose une activité pour :`,
+            options: [`A. découvrir les différents métiers du cinéma`, `B. comprendre comment on écrit un scénario`, `C. apprendre à faire une critique de film`, `D. parler d'une question de société grâce à un film`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe format « Ciné-débat » utilise la projection d'un film pour lancer une « discussion sur le sujet avec un spécialiste ». Le thème abordé (Nos relations avec nos adolescents) est une question de société.`,
+            vocabulary: [`Ciné-débat → film screening followed by a discussion`]
+        },
+        {
+            id: 169,
+            passage: `AVIS MUNICIPAL\nLes personnes qui souhaitent figurer sur les listes électorales et voter aux élections présidentielles du mois de mai prochain sont invitées à se rendre en mairie aux jours et heures habituels d'ouverture, munies d’une pièce d'identité et d'un justificatif de domicile, et ce jusqu’au 31 mars.\nIl est également possible d'effectuer cette démarche en ligne, en se connectant à son compte citoyen et en joignant les documents cités ci-dessus en version numérisée.`,
+            question: `169. Ce document annonce :`,
+            options: [`A. un changement d'horaire`, `B. une fermeture temporaire`, `C. la création d'un service`, `D. des modalités d'inscription`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'avis municipal détaille comment faire (se rendre en mairie ou en ligne), quand (jusqu'au 31 mars) et avec quoi (pièce d'identité, justificatif) pour s'inscrire sur les listes électorales. Ce sont des modalités d'inscription.`,
+            vocabulary: [`figurer sur → to appear on`, `listes électorales → electoral rolls`]
+        },
+        {
+            id: 170,
+            passage: `Le droit à la déconnexion\nLe salarié a le droit de ne pas [1] à des outils numériques professionnels (messagerie, application, logiciel, etc.) et de ne pas être contacté, en dehors de son temps de travail, avec du matériel [2] mis à sa disposition par l'employeur, ou son matériel personnel (ordinateur, téléphone mobile, etc.).`,
+            question: `170. (1)`,
+            options: [`A. se confronter`, `B. se joindre`, `C. se connecter`, `D. s'adapter`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte porte sur le droit à la « déconnexion ». Le verbe approprié pour les outils numériques et les messageries est donc son opposé logique : « se connecter ».`,
+            vocabulary: [`déconnexion → disconnection`]
+        },
+        {
+            id: 171,
+            passage: `Le droit à la déconnexion\nLe salarié a le droit de ne pas [1] à des outils numériques professionnels (messagerie, application, logiciel, etc.) et de ne pas être contacté, en dehors de son temps de travail, avec du matériel [2] mis à sa disposition par l'employeur, ou son matériel personnel (ordinateur, téléphone mobile, etc.).`,
+            question: `171. (2)`,
+            options: [`A. défectueux`, `B. collectif`, `C. professionnel`, `D. électrique`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte fait la distinction entre le matériel « mis à disposition par l'employeur » et le matériel « personnel ». Le matériel fourni par l'entreprise s'appelle le matériel « professionnel ».`,
+            vocabulary: [`mis à sa disposition → provided for their use`]
+        },
+        {
+            id: 172,
+            passage: `Offre 1 - Comme à la maison\nVenez étudier et vivre chez votre professeur |\nChaque semaine, vous avez 15 heures : 10 h de cours de langue et 5 h d'activités.\nLimité à un seul élève ! Idéal si vous avez un niveau élémentaire.\n\nOffre 2 - Venez à 2!\nVenez étudier et vivre chez votre professeur ! Idéal si vous avez un niveau intermédiaire\n\nOffre 3 - Campus international\nNous proposons 35 h par semaine... 8 élèves par groupe.\n\nOffre 4 - Campus junior\nTu as entre 8 et 12 ans et tu veux apprendre une langue en groupe ?`,
+            question: `172. Quelle offre de cours de langue propose des cours individuels ?`,
+            options: [`A. Offre 1`, `B. Offre 2`, `C. Offre 3`, `D. Offre 4`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'Offre 1 précise explicitement « Limité à un seul élève ! ». Il s'agit donc de cours individuels.`,
+            vocabulary: [`un seul élève → a single student`]
+        },
+        {
+            id: 173,
+            passage: `Voyage 1\nBienvenue dans le royaume des animaux : éléphants, zèbres...\nVoyage 2\nSans aucun doute, vous allez tomber amoureux de cette destination... rizières, temples...\nVoyage 3\nAu sud des montagnes de l'Atlas, partez à la découverte... déserts et côtes...\nVoyage 4\nEmbarquez à bord d'un navire moderne et élégant et naviguez tranquillement en mer du Nord. Admirez, profitez des nombreuses installations et divertissements du bord : piscines, bains à remous...`,
+            question: `173. Quel voyage propose une croisière ?`,
+            options: [`A. Voyage 1`, `B. Voyage 2`, `C. Voyage 3`, `D. Voyage 4`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe Voyage 4 emploie les termes « navire moderne », « naviguez », « en mer », ce qui décrit exactement une croisière.`,
+            vocabulary: [`navire → ship / vessel`, `croisière → cruise`]
+        },
+        {
+            id: 174,
+            passage: `RAPPORT DE PARTICIPATION ÉLECTORALE AU CANADA - SYNTHÈSE DE DONNÉES\n\n“Après une période marquée par un taux d'abstention fort et constant, les actions mises en œuvre pour encourager la population à voter ont été concluantes.”`,
+            question: `174. Quel graphique correspond au commentaire suivant ?`,
+            options: [`A. Graphique 1`, `B. Graphique 2`, `C. Graphique 3`, `D. Graphique 4`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte évoque deux phases : une abstinence constante (courbe basse au début) suivie d'un redressement concluant (la courbe monte). Le Graphique 3 présente ce schéma.`,
+            vocabulary: [`taux d'abstention → abstention rate`, `concluantes → conclusive / successful`]
+        },
+        {
+            id: 177,
+            passage: `Agriculture et changement climatique\nDurant les deux dernières décennies, les émissions de gaz à effet de serre de l'agriculture canadienne ont augmenté de 26 % selon les statistiques. Néanmoins, les agriculteurs utilisent déjà certaines techniques que l'ONU juge utiles pour réduire ces émissions. L'une d'elles consiste à augmenter la teneur en matières organiques du sol en exploitant les terres pour capter le carbone. En effet, des décennies d'agriculture intensive ont commencé à faire baisser la matière organique dans le sol, qui contribue à le maintenir fertile et à prévenir l'érosion. Cette technique aide non seulement à lutter contre le réchauffement climatique, mais aussi à assurer la durabilité et la résilience des sols. Les parcelles non labourées, autre procédé permettant à la matière organique de ne pas être dérangée et de se décomposer correctement, ont aussi considérablement augmenté au cours des vingt dernières années, passant de 7 % à 56 % des terres cultivées.\nLe secteur agricole doit cependant continuer à repenser ses pratiques traditionnelles... Des incitatifs financiers, enfin, pourraient contribuer grandement à faciliter cette transition.`,
+            question: `177. Selon l'auteur, la transition écologique de l'agriculture canadienne :`,
+            options: [`A. est entravée par les réticences des producteurs`, `B. impose des investissements considérables`, `C. est amorcée à travers l'adoption de nouvelles pratiques`, `D. requiert de changer de modéle de distribution`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte précise que les agriculteurs « utilisent déjà certaines techniques » (comme ne pas labourer, passé de 7% à 56%). Cela signifie que la transition n'est pas bloquée, mais qu'elle a déjà commencé (amorcée) grâce à de nouvelles méthodes.`,
+            vocabulary: [`est amorcée → has been initiated / has started`]
+        },
+        {
+            id: 178,
+            passage: `Agriculture et changement climatique\nDurant les deux dernières décennies, les émissions de gaz à effet de serre de l'agriculture canadienne ont augmenté de 26 % selon les statistiques. Néanmoins, les agriculteurs utilisent déjà certaines techniques que l'ONU juge utiles pour réduire ces émissions. L'une d'elles consiste à augmenter la teneur en matières organiques du sol en exploitant les terres pour capter le carbone. En effet, des décennies d'agriculture intensive ont commencé à faire baisser la matière organique dans le sol, qui contribue à le maintenir fertile et à prévenir l'érosion. Cette technique aide non seulement à lutter contre le réchauffement climatique, mais aussi à assurer la durabilité et la résilience des sols. Les parcelles non labourées, autre procédé permettant à la matière organique de ne pas être dérangée et de se décomposer correctement, ont aussi considérablement augmenté au cours des vingt dernières années, passant de 7 % à 56 % des terres cultivées.`,
+            question: `178. Du fait de l’agriculture intensive :`,
+            options: [`A. la dépendance aux engrais chimiques s'est intensifiée`, `B. une partie des terres cultivables a perdu ses qualités`, `C. certains troupeaux ont atteint une taille démesurée`, `D. quelques propriétaires accaparent les terres cultivables`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte indique explicitement : « des décennies d'agriculture intensive ont commencé à faire baisser la matière organique dans le sol, qui contribue à le maintenir fertile ». Perdre de la matière organique signifie perdre en fertilité, donc en qualité de terre.`,
+            vocabulary: [`fertile → fertile`, `érosion → erosion`]
+        },
+        {
+            id: 179,
+            passage: `Le corps enseignant suisse a massivement ______ l'instauration de nouvelles règles de travail et réclame plus de justice sociale.`,
+            question: `179. Complétez la phrase :`,
+            options: [`A. reculé`, `B. rejeté`, `C. modifié`, `D. annulé`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe fait de « réclamer plus de justice » indique un mécontentement face aux règles imposées. Le verbe « rejeter » (to reject) est donc le mot juste pour exprimer une forte opposition sociale et syndicale.`,
+            vocabulary: [`corps enseignant → teaching staff`, `rejeté → rejected`]
+        },
+        {
+            id: 180,
+            passage: `Le train n°2233 va entrer en _____ voieE.`,
+            question: `180. Complétez la phrase :`,
+            options: [`A. port`, `B. gare`, `C. ligne`, `D. lieu`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'expression idiomatique ferroviaire consacrée en français est « entrer en gare » (to pull into the station).`,
+            vocabulary: [`entrer en gare → to pull into the station`]
+        },
+        {
+            id: 181,
+            passage: `EcoPLUS\nChez EcoPLUS, nous avons tout pour l'équipement de votre intérieur. Nous vous offrons un service d'assistant personnel gratuit pour vos achats volumineux. Faites maintenant votre magasinage ! Choisissez sans vous déplacer ou venez nous voir en magasin pour découvrir notre offre ! Avec l'option “mise de côté”, soyez livré au moment qui vous convient. Livraison en 48h.\nVous êtes soucieux de l’environnement et vous voulez faire la différence ? Pourquoi ne pas acheter un produit remis à neuf, ou “boîte ouverte”, à prix imbattable ?\nLIVRAISON disponible au Québec et en Ontario.`,
+            question: `181. Grâce à EcoPLUS, vous pouvez :`,
+            options: [`A. mettre en vente vos meubles`, `B. déménager vos meubles`, `C. dessiner vos propres meubles`, `D. acheter des meubles d'occasion`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte propose d'acheter un produit « remis à neuf, ou boîte ouverte » (refurbished or open-box). Cela correspond à l'achat de biens/meubles d'occasion (seconde main).`,
+            vocabulary: [`remis à neuf → refurbished`, `boîte ouverte → open-box`]
+        },
+        {
+            id: 182,
+            passage: `Le Concours OMNI est de retour pour une deuxième édition pour les jeunes musiciens !\nPrix à gagner\n— Grand prix OMNI : Bourse de 5000 dollars pour le gagnant des 15-17 ans\n— Prix Hydro Québec : Bourse de 2000 dollars pour le gagnant des 12-14 ans\nInscription en ligne`,
+            question: `182. Ce document propose une inscription à :`,
+            options: [`A. un évènement sportif`, `B. un cours d'été`, `C. une exposition d'art`, `D. une compétition`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nUn « concours » destiné à désigner un « gagnant » qui remporte un « prix » (bourse) est par définition une compétition (musicale ici).`,
+            vocabulary: [`concours → competition / contest`, `bourse → scholarship / grant / prize money`]
+        },
+        {
+            id: 183,
+            passage: `Il faut _____ cette plante une fois par semaine.`,
+            question: `183. Complétez la phrase :`,
+            options: [`A. noyer`, `B. arroser`, `C. mouiller`, `D. tremper`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe verbe exact pour l'action de donner de l'eau aux plantes de façon contrôlée est « arroser » (to water).`,
+            vocabulary: [`arroser → to water (plants)`]
+        },
+        {
+            id: 184,
+            passage: `Restaurant 1\nBaigné de lumière et habillé de matières nobles...\nRestaurant 2\nDessance est un restaurant gastronomique inédit : cuisine créative avec des jeux de textures et de températures subtils... Dans les assiettes, le chef dresse avec virtuosité des scènes de nature, poétiques et enchanteresses...\nRestaurant 3\nDécouvrez L'Inspiration, une brasserie à la décoration simple et élégante...\nRestaurant 4\nSylvestre Wahid impose avec grâce sa marque dans la demeure qui porte son nom...`,
+            question: `184. Quel restaurant propose une présentation originale des plats ?`,
+            options: [`A. Restaurant 1`, `B. Restaurant 2`, `C. Restaurant 3`, `D. Restaurant 4`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe Restaurant 2 explique que le chef dresse (« plating ») des « scènes de nature, poétiques » directement « dans les assiettes ». Il s'agit d'une présentation originale.`,
+            vocabulary: [`jeux de textures → play on textures`, `dresse (dresser une assiette) → to plate / arrange food`]
+        },
+        {
+            id: 185,
+            passage: `Le nombre de touristes internationaux a chuté après des années de croissance sans interruption, la reprise se fait progressivement.`,
+            question: `185. Quel graphique correspond à ce commentaire ?`,
+            options: [`A. Graphique 1`, `B. Graphique 2`, `C. Graphique 3`, `D. Graphique 4`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte décrit trois étapes : une croissance longue et ininterrompue, suivie d'une forte chute, puis d'une reprise lente. La description correspond à la forme du graphique décrit en option C.`,
+            vocabulary: [`a chuté → plummeted / dropped sharply`, `reprise → recovery`]
+        },
+        {
+            id: 186,
+            passage: `Extraits de la Déclaration des Droits de l'Homme de 1789\nArticle IV\nLa liberté consiste à pouvoir faire tout ce qui ne nuit pas à autrui : ainsi, l'exercice des droits naturels de chaque homme n’a de bornes que celles qui assurent aux autres Membres de la Société la jouissance de ces mêmes droits. Ces bornes ne peuvent être déterminées que par la Loi.\nArticle V\nLa Loi n’a le droit de défendre que les actions nuisibles à la Société. Tout ce qui n’est pas défendu par la Loi ne peut être empêché, et nul ne peut être contraint à faire ce qu'elle n'ordonne pas.\nArticle VI\nLa Loi est l'expression de la volonté générale. (...) Elle doit être la même pour tous, soit qu'elle protège, soit qu'elle punisse.`,
+            question: `186. Ces articles :`,
+            options: [`A. définissent un cadre relatif aux libertés publiques`, `B. requièrent l'approbation des citoyens par référendum`, `C. recensent les agissements nuisibles à la Société`, `D. déclarent un durcissement de la législation`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nCes articles fondamentaux posent les règles générales de la liberté individuelle, des droits naturels et du rôle de la loi pour protéger les citoyens. Ils définissent donc le cadre législatif des libertés publiques.`,
+            vocabulary: [`nuit pas à autrui → does not harm others`, `bornes → limits / boundaries`]
+        },
+        {
+            id: 187,
+            passage: `Extraits de la Déclaration des Droits de l'Homme de 1789\nArticle IV\nLa liberté consiste à pouvoir faire tout ce qui ne nuit pas à autrui : ainsi, l'exercice des droits naturels de chaque homme n’a de bornes que celles qui assurent aux autres Membres de la Société la jouissance de ces mêmes droits. Ces bornes ne peuvent être déterminées que par la Loi.\nArticle V\nLa Loi n’a le droit de défendre que les actions nuisibles à la Société. Tout ce qui n’est pas défendu par la Loi ne peut être empêché, et nul ne peut être contraint à faire ce qu'elle n'ordonne pas.\nArticle VI\nLa Loi est l'expression de la volonté générale. (...) Elle doit être la même pour tous, soit qu'elle protège, soit qu'elle punisse.`,
+            question: `187. Selon ces articles :`,
+            options: [`A. l'égalité des citoyens est conditionnée par leur instruction`, `B. le sort d'un citoyen dépend de la volonté générale`, `C. les lois sur les libertés sont irrevocables`, `D. la loi n'interdit que ce qui est néfaste à autrui`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'Article V le dit textuellement : « La Loi n’a le droit de défendre [interdire] que les actions nuisibles à la Société ». Nuisible est un synonyme de néfaste.`,
+            vocabulary: [`défendre (dans ce contexte juridique) → to forbid / prohibit`, `néfaste → harmful / detrimental`]
+        },
+        {
+            id: 188,
+            passage: `Le français en déclin au Québec\nD'après une récente enquête, 94,5% des Québécois seraient capables d'avoir une conversation en français. Ce chiffre atteint des sommets historiques et il est alors légitime de se demander si la langue de Molière est véritablement en déclin. Selon les linguistes, pour qu'une langue survive, il est essentiel qu'elle soit adoptée et transmise dans les familles. Or, en 10 ans, le nombre de personnes déclarant utiliser le français dans leur foyer a baissé de 3%. Il ne s'agit pas d’un recul précipité mais cela reste tout de même à signaler.\nL'anglais, considéré comme la grande “menace” pour le français au Québec, ne peut pas être tenu pour responsable car, pendant les vingt dernières années, il a également connu un ralentissement. Même si bon nombre de “nouveaux arrivants” parlent une langue tierce à la maison, quasiment la moitié déclare utiliser le français. Ce mince recul ne serait donc pas dû à des progrès de la langue de Shakespeare mais plutôt à l'augmentation de langues non officielles. Bref, bien que sa survie dans cet océan anglophone qu'est l'Amérique du Nord ne soit jamais assurée, il n'est pas vraiment possible de parler d’un déclin du français.`,
+            question: `188. Cet article :`,
+            options: [`A. explique les avantages du bilinguisme au Québec`, `B. évoque l'enseignement des langues au Québec`, `C. décrit le rôle de la langue anglaise au Québec`, `D. analyse la situation linguistique du Québec`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte présente des statistiques, décrit l'évolution de la langue à la maison, écarte la faute de l'anglais et conclut sur l'état général. C'est une analyse globale de la situation (démographique et linguistique) de la langue au Québec.`,
+            vocabulary: [`langue de Molière → the French language`, `langue tierce → a third language`]
+        },
+        {
+            id: 189,
+            passage: `Le français en déclin au Québec\nD'après une récente enquête, 94,5% des Québécois seraient capables d'avoir une conversation en français. Ce chiffre atteint des sommets historiques et il est alors légitime de se demander si la langue de Molière est véritablement en déclin. Selon les linguistes, pour qu'une langue survive, il est essentiel qu'elle soit adoptée et transmise dans les familles. Or, en 10 ans, le nombre de personnes déclarant utiliser le français dans leur foyer a baissé de 3%. Il ne s'agit pas d’un recul précipité mais cela reste tout de même à signaler.\nL'anglais, considéré comme la grande “menace” pour le français au Québec, ne peut pas être tenu pour responsable car, pendant les vingt dernières années, il a également connu un ralentissement. Même si bon nombre de “nouveaux arrivants” parlent une langue tierce à la maison, quasiment la moitié déclare utiliser le français. Ce mince recul ne serait donc pas dû à des progrès de la langue de Shakespeare mais plutôt à l'augmentation de langues non officielles. Bref, bien que sa survie dans cet océan anglophone qu'est l'Amérique du Nord ne soit jamais assurée, il n'est pas vraiment possible de parler d’un déclin du français.`,
+            question: `189. Au Québec, la langue française :`,
+            options: [`A. parvient à maintenir sa position`, `B. n'est plus la langue d'intégration`, `C. connaît une baisse importante`, `D. attire de moins en moins de locuteurs`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLa conclusion de l'auteur est claire : « il n'est pas vraiment possible de parler d'un déclin ». Les chiffres sont aux « sommets historiques » et malgré un « mince recul » à la maison, la langue maintient globalement sa forte position.`,
+            vocabulary: [`sommets historiques → historical highs`, `recul précipité → sharp/precipitous decline`]
+        },
+        {
+            id: 190,
+            passage: `La lutte sénégalaise est-elle trop violente ?\nLa lutte sénégalaise suscite un engouement dans tout le pays. Le caractère violent et spectaculaire des combats opposant des mastodontes n'y est pas étranger. Une certaine hypocrisie sous-tend cette polémique sur la violence de la lutte : ces combats attirent le public. Au Sénégal, tout le monde a son lutteur préféré, même le président et les marabouts.\nMais le spectacle serait-il plus important que la protection des lutteurs ? Faire de la lutte, c'est comme faire de la boxe : il faut déjà apprendre à ne pas prendre de coups. Selon la réglementation du sport, les coups sont interdits sur la nuque, en dessous de la ceinture et sur les hommes à terre. Le port du protège-dents a également été rendu obligatoire. Toutefois, la puissance des lutteurs étant mystifiée et comparée à celle de grands guerriers, il est difficile de faire accepter une idée de protection dans ce sport.\nLa pratique de cette discipline a bien évolué. Certains professionnels regrettent surtout que l'art de la lutte traditionnelle se perde : les anciens lutteurs étaient des passionnés et avaient beaucoup plus de technique qu'ils n’en ont aujourd'hui.`,
+            question: `190. D'après l'article,`,
+            options: [`A. le divertissement du public l'emporte sur la santé des athlètes.`, `B. la lutte véhicule des valeurs de courage depuis toujours.`, `C. la popularité d'un lutteur est attribuée à son savoir-faire.`, `D. les lutteurs revendiquent plus de souplesse dans leur pratique.`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'auteur s'interroge : « le spectacle serait-il plus important que la protection des lutteurs ? ». Le texte ajoute qu'il est « difficile de faire accepter une idée de protection » parce que les combats violents attirent le public. C'est le divertissement qui prime.`,
+            vocabulary: [`engouement → enthusiasm / craze`, `mastodontes → giants / hulks`]
+        },
+        {
+            id: 191,
+            passage: `La lutte sénégalaise est-elle trop violente ?\nLa lutte sénégalaise suscite un engouement dans tout le pays. Le caractère violent et spectaculaire des combats opposant des mastodontes n'y est pas étranger. Une certaine hypocrisie sous-tend cette polémique sur la violence de la lutte : ces combats attirent le public. Au Sénégal, tout le monde a son lutteur préféré, même le président et les marabouts.\nMais le spectacle serait-il plus important que la protection des lutteurs ? Faire de la lutte, c'est comme faire de la boxe : il faut déjà apprendre à ne pas prendre de coups. Selon la réglementation du sport, les coups sont interdits sur la nuque, en dessous de la ceinture et sur les hommes à terre. Le port du protège-dents a également été rendu obligatoire. Toutefois, la puissance des lutteurs étant mystifiée et comparée à celle de grands guerriers, il est difficile de faire accepter une idée de protection dans ce sport.\nLa pratique de cette discipline a bien évolué. Certains professionnels regrettent surtout que l'art de la lutte traditionnelle se perde : les anciens lutteurs étaient des passionnés et avaient beaucoup plus de technique qu'ils n'en ont aujourd’hui.`,
+            question: `191. Les lutteurs`,
+            options: [`A. héritent de la même renommée que leurs prédécesseurs.`, `B. perfectionnent leur technicité au fil des générations.`, `C. sont considérés comme des légendes vivantes.`, `D. sont connus pour leurs services au sein de l'armée sénégalaise.`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte affirme que la puissance des lutteurs est « mystifiée et comparée à celle de grands guerriers ». Cela signifie qu'ils sont adulés et vus de manière quasi mythologique, comme des légendes vivantes par la population.`,
+            vocabulary: [`mystifiée → mystified / mythologized`]
+        },
+        {
+            id: 192,
+            passage: `Le lundi, les enfants ______ l'école à 16h.`,
+            question: `192. Complétez la phrase :`,
+            options: [`A. écoutent`, `B. finissent`, `C. passent`, `D. comprennent`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'expression « finir l'école à [telle heure] » s'utilise pour indiquer l'heure de sortie ou de fin des cours dans la journée d'un élève.`,
+            vocabulary: [`finir l'école → to finish school (for the day)`]
+        },
+        {
+            id: 193,
+            passage: `Grâce à la mise en place de collectes, nous avons multiplié les poubelles pour permettre à chacun de ______ les déchets selon leur nature.`,
+            question: `193. Complétez la phrase :`,
+            options: [`A. sortir`, `B. trier`, `C. mélanger`, `D. conserver`],
+            correctIndex: 1,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'action de séparer les déchets « selon leur nature » (verre, carton, plastique) dans plusieurs poubelles s'appelle le tri sélectif. Le verbe exact est donc « trier » (to sort).`,
+            vocabulary: [`trier les déchets → to sort the trash/recycling`]
+        },
+        {
+            id: 194,
+            passage: `Plusieurs centaines de ______ écologistes se sont rassemblés devant le Parlement.`,
+            question: `194. Complétez la phrase :`,
+            options: [`A. protecteurs`, `B. supporters`, `C. défenseurs`, `D. militants`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nDans le vocabulaire politique et associatif, une personne qui s'engage activement pour une cause et participe à des rassemblements/manifestations est un « militant ».`,
+            vocabulary: [`militants → activists`]
+        },
+        {
+            id: 195,
+            passage: `Critique 1\nLe rapport qualité/prix est acceptable pour un menu du jour plutôt correct, avec néanmoins quelques points négatifs à signaler: viande de bœuf trop cuite et donc très sèche et dure.\nCritique 2\nLa cuisine est plutôt bien exécutée, même si les plats ne sont pas toujours à la bonne température... L'axe de progrès reste le service, bien intentionné mais désorganisé...\nCritique 3\nAu fin fond de la forêt, une maison à colombages, rustique mais triste... Son chef y relève le pari d’une cuisine traditionnelle... On fait volontiers halte dans cette auberge malgré un cadre un peu froid.\nCritique 4\nUn repas en terrasse agréable mais perturbé par la pluie. Dommage que l'intérieur manque de place. Bonne cuisine, service souriant.`,
+            question: `195. Laquelle de ces critiques concerne le décor ?`,
+            options: [`A. Critique 1`, `B. Critique 2`, `C. Critique 3`, `D. Critique 4`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLa Critique 3 juge directement l'apparence physique et visuelle du lieu : « une maison à colombages, rustique mais triste » et un « cadre un peu froid ». Cela correspond bien au décor.`,
+            vocabulary: [`cadre → setting / surroundings`, `maison à colombages → half-timbered house`]
+        },
+        {
+            id: 196,
+            passage: `Critique 1\nDépoussiérer d’Artagnan pour lui donner un souffle nouveau...\nCritique 2\nUne nouvelle adaptation française des Trois Mousquetaires. Ce film plein d'action et d'humour nous livre une histoire captivante...\nCritique 3\nCertains aspects de ce film font penser au style de Fellini. Le personnage principal, d’Artagnan, est présenté de façon pour le moins modeste au début mais il se révèle progressivement. Les décors impressionnants rendent bien l'atmosphère présumée de l'époque. C'est évidemment un film d'action, agrémenté d’une touche historique...\nCritique 4\nAprès un accueil favorable en France, le film Les Trois Mousquetaires: d'Artagnan, prend l'affiche vendredi... le scénario est truffé de détails et de sous-intrigues inventées...`,
+            question: `196. Laquelle de ces critiques met-elle en valeur la véracité du film ?`,
+            options: [`A. Critique 1`, `B. Critique 2`, `C. Critique 3`, `D. Critique 4`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLa Critique 3 note que « Les décors impressionnants rendent bien l'atmosphère présumée de l'époque » et salue la « touche historique ». Elle valide donc la crédibilité et la véracité (l'authenticité) de la reconstitution historique.`,
+            vocabulary: [`véracité → truthfulness / authenticity`]
+        },
+        {
+            id: 197,
+            passage: `Le nombre de touristes internationaux a chuté après des années de croissance sans interruption, la reprise se fait progressivement.`,
+            question: `197. Quel graphique correspond au commentaire suivant ?`,
+            options: [`A. Graphique 1`, `B. Graphique 2`, `C. Graphique 3`, `D. Graphique 4`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe commentaire décrit une longue période de croissance ininterrompue, suivie d'une forte chute abrupte, puis d'une reprise lente. Cette forme de courbe correspond exactement à l'option retenue.`,
+            vocabulary: [`a chuté → plummeted / dropped sharply`, `reprise → recovery`]
+        },
+        {
+            id: 198,
+            passage: `OFFRE SPÉCIALE “FETE DES PÈRES”\nVenez célébrer un moment spécial en compagnie de votre papa et profitez d'une réduction sur la location de nos kayaks biplaces à la demi-journée.\nN'oubliez pas de réserver vos places !`,
+            question: `198. Ce document propose :`,
+            options: [`A. un jeu concours`, `B. un événement sportif`, `C. une visite guidée`, `D. une promotion exceptionnelle`],
+            correctIndex: 3,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nLe texte offre une « réduction » financière (« Offre spéciale ») liée à un événement spécifique du calendrier (la fête des pères). C'est la définition d'une promotion commerciale/exceptionnelle.`,
+            vocabulary: [`réduction → discount`, `demi-journée → half-day`]
+        },
+        {
+            id: 199,
+            passage: `Tu peux _____ les billets de train, s’il te plait ?`,
+            question: `199. Complétez la phrase :`,
+            options: [`A. réserver`, `B. fixer`, `C. louer`, `D. arrêter`],
+            correctIndex: 0,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nEn français, pour garantir sa place à bord d'un moyen de transport (train, avion), le seul verbe correct est « réserver » (to book / to reserve).`,
+            vocabulary: [`réserver → to book`, `billets de train → train tickets`]
+        },
+        {
+            id: 200,
+            passage: `Offre 1\nVotre soeur part tous les week-ends en montagne ? Votre cousin passe ses vacances sous une tente? Ce coffret du randonneur est fait pour eux ! Ils y trouveront des objets qui facilitent la vie quand on est dans la nature ainsi qu'un petit guide (humoristique) de survie.\nOffre 2\nCe coffret contient tout ce dont les amateurs de thé ont besoin: deux tasses, une boule à thé et une cuillère à doser. Vous y trouverez également un set de 20 sachets à remplir et un mini-guide des thés, indispensable pour les passionnés de cette boisson et de ses bienfaits.\nOffre 3\n“Ma première bibliothèque”, ce sont des coffrets adaptés aux adolescents pour les initier aux plaisirs de la lecture, qui incluent plusieurs romans actuels de différentes thématiques, une mini-lampe de lecture, un marque-page et un sachet de bonbons et sucreries à grignoter.\nOffre 4\nLe coffret cadeau idéal pour les chefs en herbe: il contient tous les ustensiles nécessaires pour commencer à cuisiner, un livre de 40 recettes accompagnées de conseils et un livret sur les épices (curry, curcuma...) pour apprendre à les utiliser. Tout pour réussir ses premiers pas en cuisine!`,
+            question: `200. Quel coffret cadeau inclut de la nourriture ?`,
+            options: [`A. Offre 1`, `B. Offre 2`, `C. Offre 3`, `D. Offre 4`],
+            correctIndex: 2,
+            explanation: `**Pourquoi la bonne réponse est justifiée :**\nL'Offre 3 indique explicitement qu'elle contient un « sachet de bonbons et sucreries à grignoter ». Les bonbons et sucreries sont des produits alimentaires (nourriture).`,
+            vocabulary: [`sucreries à grignoter → sweets to snack on`, `chefs en herbe → budding chefs`]
+        }
+    ];
+
+    let currentMode = 'order'; // order, random, exam, review
+    let currentPool = [];
+    let currentIndex = 0;
+    let score = 0;
+    let totalAnswered = 0;
+    let mistakes = new Set();
+    let examAnswers = [];
+
+    function updateStats() {
+        if (currentMode === 'exam') return; 
+        let pct = totalAnswered === 0 ? 0 : Math.round((score / totalAnswered) * 100);
+        document.getElementById('stats-display').innerText = `Score: ${score} / ${totalAnswered} | Accuracy: ${pct}%`;
+        document.getElementById('question-counter').innerText = `Question ${currentIndex + 1} / ${currentPool.length}`;
+    }
+
+    function startMode(mode) {
+        currentMode = mode;
+        score = 0;
+        totalAnswered = 0;
+        currentIndex = 0;
+        examAnswers = [];
+        
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('exam-summary').classList.add('hidden');
+
+        if (mode === 'order' || mode === 'exam') {
+            currentPool = [...questions];
+            if (mode === 'exam') {
+                document.getElementById('stats-display').innerText = "EXAM MODE (Answers hidden until end)";
+            }
+        } else if (mode === 'random') {
+            currentPool = [...questions].sort(() => Math.random() - 0.5);
+        } else if (mode === 'review') {
+            currentPool = questions.filter(q => mistakes.has(q.id));
+            if (currentPool.length === 0) {
+                alert("Aucune erreur à réviser ! / No mistakes to review!");
+                startMode('order');
+                return;
+            }
+        }
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if (currentIndex >= currentPool.length) {
+            if (currentMode === 'exam') showExamSummary();
+            return;
+        }
+
+        const q = currentPool[currentIndex];
+        document.getElementById('passage-text').innerText = q.passage;
+        document.getElementById('question-text').innerText = q.question;
+        document.getElementById('explanation-container').style.display = 'none';
+        
+        const optsContainer = document.getElementById('options-container');
+        optsContainer.innerHTML = '';
+        
+        q.options.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => selectAnswer(idx, btn);
+            optsContainer.appendChild(btn);
+        });
+
+        document.getElementById('next-btn').classList.add('hidden');
+        document.getElementById('prev-btn').classList.toggle('hidden', currentIndex === 0 || currentMode === 'exam');
+        updateStats();
+    }
+
+    function selectAnswer(selectedIndex, btnNode) {
+        const q = currentPool[currentIndex];
+        const optsContainer = document.getElementById('options-container');
+        const buttons = optsContainer.getElementsByTagName('button');
+        
+        for (let b of buttons) b.disabled = true;
+
+        if (currentMode === 'exam') {
+            examAnswers.push({ id: q.id, selected: selectedIndex, correct: q.correctIndex });
+            btnNode.style.borderColor = "var(--text)";
+            document.getElementById('next-btn').classList.remove('hidden');
+            return;
+        }
+
+        totalAnswered++;
+        const isCorrect = (selectedIndex === q.correctIndex);
+        
+        if (isCorrect) {
+            score++;
+            btnNode.classList.add('correct');
+            document.getElementById('verdict-title').innerText = "✓ Correct";
+            document.getElementById('verdict-title').style.color = "var(--correct)";
+            if(currentMode === 'review') mistakes.delete(q.id); 
+        } else {
+            btnNode.classList.add('incorrect');
+            buttons[q.correctIndex].classList.add('correct');
+            document.getElementById('verdict-title').innerText = "✗ Incorrect";
+            document.getElementById('verdict-title').style.color = "var(--incorrect)";
+            mistakes.add(q.id);
+        }
+
+        document.getElementById('explanation-text').innerHTML = q.explanation.replace(/\n/g, '<br>');
+        const vocabList = document.getElementById('vocab-list');
+        vocabList.innerHTML = '';
+        q.vocabulary.forEach(v => {
+            let li = document.createElement('li');
+            li.innerText = v;
+            vocabList.appendChild(li);
+        });
+        
+        document.getElementById('explanation-container').style.display = 'block';
+        document.getElementById('next-btn').classList.remove('hidden');
+        updateStats();
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        loadQuestion();
+    }
+
+    function prevQuestion() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            loadQuestion();
+        }
+    }
+
+    function showExamSummary() {
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('exam-summary').classList.remove('hidden');
+        
+        let correctCount = examAnswers.filter(a => a.selected === a.correct).length;
+        let pct = Math.round((correctCount / examAnswers.length) * 100);
+        
+        examAnswers.forEach(a => { if(a.selected !== a.correct) mistakes.add(a.id); });
+        
+        document.getElementById('exam-results').innerHTML = `
+            Total Score: ${correctCount} / ${examAnswers.length}<br>
+            Percentage: ${pct}%<br>
+            Incorrect Answers Logged: ${examAnswers.length - correctCount}
+        `;
+        document.getElementById('stats-display').innerText = `Exam Finished - ${pct}%`;
+    }
+
+    // Init
+    window.onload = () => startMode('order');
+</script>
+</body>
+</html>
