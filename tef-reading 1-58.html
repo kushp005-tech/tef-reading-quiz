@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEF Canada - Interactive Reading Practice</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #ecf0f1;
+            --panel-bg: #ffffff;
+            --text: #333333;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; line-height: 1.6; }
+        header { background-color: var(--primary); color: white; padding: 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        header h1 { margin: 0; font-size: 24px; }
+        .nav-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; padding: 15px; background-color: var(--secondary); }
+        .nav-btn { background-color: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
+        .nav-btn:hover { background-color: #2980b9; }
+        .nav-btn.active { background-color: #f1c40f; color: #333; }
+        
+        .main-container { display: flex; max-width: 1300px; margin: 20px auto; gap: 20px; padding: 0 15px; }
+        @media(max-width: 900px) { .main-container { flex-direction: column; } }
+        
+        .panel { background-color: var(--panel-bg); border-radius: 8px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); flex: 1; }
+        .passage-panel { flex: 1.2; overflow-y: auto; max-height: 75vh; }
+        .passage-text { white-space: pre-wrap; font-size: 1.05em; }
+        
+        .question-panel { flex: 1; display: flex; flex-direction: column; }
+        .stats-bar { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 20px; color: var(--secondary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        .question-text { font-size: 1.2em; font-weight: bold; margin-bottom: 20px; color: var(--primary); }
+        
+        .options-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .option-btn { text-align: left; background-color: #f8f9fa; border: 2px solid #bdc3c7; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1em; transition: all 0.2s ease; }
+        .option-btn:hover:not(:disabled) { border-color: var(--accent); background-color: #ebf5fb; }
+        .option-btn:disabled { cursor: default; }
+        .option-btn.correct { background-color: #eafaf1; border-color: var(--success); color: #1e8449; font-weight: bold; }
+        .option-btn.incorrect { background-color: #fdedec; border-color: var(--error); color: #c0392b; }
+        
+        .explanation-box { background-color: #fff9e6; border-left: 5px solid #f1c40f; padding: 15px 20px; margin-bottom: 20px; border-radius: 0 8px 8px 0; display: none; }
+        .explanation-box h3 { margin-top: 0; display: flex; align-items: center; gap: 10px; }
+        .vocab-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid #dcdde1; }
+        .vocab-item { margin-bottom: 5px; }
+        
+        .controls { display: flex; justify-content: space-between; margin-top: auto; }
+        .control-btn { background-color: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .control-btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        
+        .hidden { display: none !important; }
+        .exam-results { text-align: center; padding: 40px; }
+        .exam-results h2 { font-size: 2em; margin-bottom: 10px; }
+        .score-display { font-size: 3em; font-weight: bold; color: var(--accent); margin: 20px 0; }
+        .mistakes-list { text-align: left; margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Interactive TEF Reading Practice (Compréhension écrite)</h1>
+</header>
+
+<div class="nav-bar">
+    <button class="nav-btn active" id="mode-order" onclick="setMode('order')">Practice in Order</button>
+    <button class="nav-btn" id="mode-random" onclick="setMode('random')">Random Practice</button>
+    <button class="nav-btn" id="mode-exam" onclick="setMode('exam')">Full Exam Mode</button>
+    <button class="nav-btn" id="mode-review" onclick="setMode('review')">Review My Mistakes</button>
+</div>
+
+<div id="quiz-ui" class="main-container">
+    <div class="panel passage-panel">
+        <div id="passage" class="passage-text"></div>
+    </div>
+    
+    <div class="panel question-panel">
+        <div class="stats-bar" id="stats-bar">
+            <span id="q-progress">Question 1 / X</span>
+            <span id="score-tracker">Score: 0 | Accuracy: 0%</span>
+        </div>
+        
+        <div id="question" class="question-text"></div>
+        <div id="options" class="options-container"></div>
+        
+        <div id="explanation" class="explanation-box">
+            <h3 id="exp-title"></h3>
+            <div id="exp-content"></div>
+            <div id="vocab" class="vocab-section hidden">
+                <strong>Vocabulaire utile:</strong>
+                <div id="vocab-list"></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="prev-btn" class="control-btn" onclick="navQuestion(-1)">Précédent</button>
+            <button id="submit-exam-btn" class="control-btn hidden" onclick="submitExam()">Soumettre l'examen</button>
+            <button id="next-btn" class="control-btn" onclick="navQuestion(1)">Suivant</button>
+        </div>
+    </div>
+</div>
+
+<div id="exam-ui" class="main-container hidden">
+    <div class="panel exam-results">
+        <h2>Résultats de l'examen</h2>
+        <div class="score-display" id="final-score"></div>
+        <p id="final-stats"></p>
+        <button class="control-btn" onclick="setMode('review')">Review Mistakes</button>
+        <button class="control-btn" onclick="setMode('order')" style="margin-left: 10px;">Restart Practice</button>
+        <div id="mistakes-breakdown" class="mistakes-list"></div>
+    </div>
+</div>
+
+<script>
+    // --- DATABASE CONSOLIDATION --- //
+    // Helper constants to reduce data size for recurring passages.
+    const p_insect = `L'industrie des insectes en plein fourmillement\n\nL'entomophagie, c'est-à-dire le fait de manger des insectes, est déjà répandue dans de nombreux pays. Quelque deux milliards d'habitants sur la planète consomment près de deux mille espèces d'insectes différentes. « Manger moins de viande et davantage de fruits et légumes implique de jouer sur des leviers psychologiques et culturels, insiste le chercheur Patrick Borel. Il faut tout d'abord éduquer les populations à cette consommation. Côté environnement, pas d'hésitation. « Les fermes à insectes présentent de nombreux avantages par rapport aux élevages de porcs et de bovins, explique le chercheur. Les insectes ont besoin de beaucoup moins d'eau, de moins d'espace, ils produisent moins de gaz à effet de serre. Restent les coûts. « L'un des problèmes actuels est le coût du kilo de protéine d'insectes, encore trop élevé », souligne Patrick Borel. La filière est naissante, elle aurait besoin d'un coup de pouce pour devenir compétitive. L'Organisation des Nations Unies pour l'alimentation et l'agriculture, et l'Autorité européenne de sécurité des aliments encouragent l'utilisation des insectes qui peuvent contribuer à la sécurité alimentaire et présentent des bénéfices pour l'environnement. « Mais sur le plan gouvernemental, en France, c'est encore hésitant », conclut Patrick Borel.[cite: 1]`;
+    
+    const p_num = `Maltraitance institutionnelle\n\nConduite à marche forcée, la numérisation de l'accès aux services publics s'applique désormais à des démarches aussi indispensables qu'une demande d'état civil, le règlement d'un impôt, l'obtention d'un permis de séjour. Pourtant, l'obligation de recourir à Internet quotidiennement implique un effort particulier pour ceux qui sont les moins en mesure de le fournir faute de matériel, de savoirs informatiques ou d'assistance des proches.\n\nDès les premiers mots du rapport qu'elle consacre au rôle croissant du numérique dans la relation entre l'administration et ses usagers, la défenseuse des droits Claire Hédon donne le ton : « Dans les permanences de nos délégués territoriaux arrivent des personnes épuisées et désespérées, qui font part de leur soulagement à pouvoir, enfin parler à quelqu'un en chair et en os. »\n\nLes plus en difficulté sont souvent les personnes âgées, les ruraux, les non diplômés, les étrangers. Inversement les cadres, hauts revenus et diplômés du supérieur sont bien équipés en ordinateurs, smartphones et recourent volontiers à l'administration numérique. En somme, plus une personne affronte une situation de précarité sociale, plus il lui est difficile d'accéder à ses droits, à ses prestations, aux services publics. Observant que la situation tend à se dégrader, Mme Hédon rappelle que nul ne peut être privé de ses droits au motif qu'il ne recourt pas au numérique lors de ses échanges avec l'administration. Car pour beaucoup, la dématérialisation forcée n'a pas représenté une simplification mais une forme de maltraitance institutionnelle.[cite: 1]`;
+    
+    const p_feux = `Au Canada, les feux de végétation brûlent en moyenne 2,5 millions d'hectares de forêts par année. Les incendies posent alors un défi pour l'aménagement forestier car ils sont à la fois bénéfiques et dangereux.\n\nLes feux non-maîtrisés peuvent représenter une menace pour les collectivités et détruire d'importantes quantités de ressources. Toutefois, les incendies sont aussi un phénomène naturel et ils participent à la régénération de l'écosystème forestier. Des évaluations de plus en plus précises de la situation des feux au Canada aident les gestionnaires des terres à utiliser les connaissances de la science forestière pour réduire les risques de feu de végétation et à optimiser les avantages de tels feux. Un petit nombre de feux consiste alors en des brûlages dirigés par des forestiers autorisés. Le but est de reproduire les processus naturels liés aux feux de végétation. Ils constituent un précieux outil pour les ressources lorsqu'il s'agit d'améliorer les conditions écologiques et d'éliminer l'accumulation excessive de combustibles.\n\nCependant, tous les feux de végétation ne peuvent pas être contrôlés. Les organismes responsables des forêts exploitent donc la force du feu naturel pour tirer avantage de ses bénéfices écologiques tout en limitant les dommages et les coûts potentiels.[cite: 1]`;
+    
+    const p_medias = `Médias et comportements\n\nDes chercheurs danois se sont demandé pourquoi les discussions en ligne sont plus hostiles que les discussions hors ligne. L'une des explications souvent avancées réside dans le fait que la psychologie humaine serait adaptée à une interaction en face à face, de personne à personne. Selon cette hypothèse, le comportement des gens changerait donc pour le pire lors de discussions impersonnelles qui se déroulent en ligne. Or, dans huit études s'appuyant sur des expériences comportementales, les chercheurs n'ont pas pu confirmer cette hypothèse, bien au contraire. Leurs résultats montrent que les discussions hostiles sont causées par des individus motivés par leur statut qui sont tout aussi hostiles en ligne que hors ligne. Ils ont également constaté que les gens bienveillants évitent habituellement toutes polémiques, qu'elles se produisent dans les blogues, les forums ou les réseaux sociaux. Il n'existe pas de solution facile pour empêcher les comportements agressifs sur internet. Les chercheurs pensent qu'il est pratiquement impossible de bloquer la haine en ligne par l'éducation, puisqu'elle n'est pas le fruit de l'ignorance : les gens hostiles savent que leurs mots blessent et c'est pourquoi ils les utilisent. La meilleure façon de les contrer passerait alors par une modération intensive des sites de discussion.[cite: 1]`;
+    
+    const p_lefort = `Monsieur Lefort,\nJe représente les intérêts de Monsieur Dufour François, photographe.\nMonsieur Dufour est titulaire des droits d'auteur sur ses œuvres et pourrait demander réparation contre toutes reproductions faites sans son consentement.\nOr, mon client a constaté que vous utilisiez sans autorisation sur votre site Internet ses œuvres originales.\nDans ces circonstances, une action à votre encontre aurait de fortes chances d'aboutir favorablement. Cependant, mon client m'a demandé de rechercher avec vous une solution amiable visant au retrait des images litigieuses de votre site Internet. Faute de réaction de votre part sous huitaine, j'ai pour instruction d'engager toute action utile à votre encontre.\nJe vous prie de croire, Monsieur Lefort, en l'assurance de ma considération.\nMaître Rivet[cite: 1]`;
+
+    const p_conflits = `Guide interne - Gestion des conflits d'intérêts au sein de l'entreprise\n\nLa gestion des conflits d'intérêts constitue un enjeu majeur pour la transparence et l'intégrité de notre organisation.\nAfin de prévenir toute situation susceptible de compromettre l'objectivité des décisions, il est indispensable que chaque collaborateur identifie, déclare et gère les situations conflictuelles potentielles.\nUn conflit d'intérêts peut survenir lorsqu'un intérêt personnel, financier ou relationnel influence, ou pourrait influencer, l'exercice impartial des fonctions professionnelles. Cette définition large inclut notamment les cas de relations familiales, de participations financières dans des entreprises partenaires ou concurrentes, ainsi que d'activités extraprofessionnelles pouvant interférer avec les missions confiées.\nLa politique interne impose une déclaration systématique dès l'apparition d'un conflit, suivie d'une évaluation par le comité d'éthique qui proposera des mesures adaptées, telles que la mise à l'écart temporaire ou définitive des décisions concernées. Il est également recommandé d'adopter une posture de vigilance permanente afin d'anticiper les risques et de maintenir la confiance des parties prenantes.[cite: 1]`;
+
+    const p_chomage = `L'activité partielle, appelée aussi « chômage partiel », est un dispositif d'aide aux entreprises qui font face à des difficultés économiques. Il permet aux salariés, placés en activité partielle, de recevoir de la part de leur employeur une indemnité visant à compenser la perte de rémunération du fait des heures non travaillées.\nLe salarié placé en activité partielle voit son nombre d'heures de travail réduit partiellement ou en totalité pour une période déterminée. La période indemnisée au titre de l'activité partielle par l'employeur est considérée comme chômée. Cela signifie que le contrat de travail est suspendu mais n'est pas rompu.[cite: 1]`;
+
+    const p_fille = `Je vous adresse ma candidature pour le poste de jeune fille au pair.\nJ'ai l'habitude des enfants car je travaille dans un centre de loisirs depuis deux ans. J'aimerais aujourd'hui travailler dans un pays étranger pour rencontrer une nouvelle famille et découvrir sa culture. Je souhaite aussi améliorer mon anglais, compétence essentielle pour mes études.\nJe suis dynamique et patiente. Je peux participer à la préparation des repas et aux tâches ménagères. Le bien-être des enfants est une priorité, c'est pourquoi je leur propose des activités qui respectent leur rythme physiologique.[cite: 1]`;
+    
+    const p_peur = `La peur ou le déni de l'apocalypse climatique ?\n\nPour comprendre l'étrange accoutumance à des périls amplement démontrés par les scientifiques, l'historienne Judith Rainhorn, décrypte dans ses travaux les processus historiques qui nourrissent, depuis plus d'un siècle, la « fabrique du consentement » aux risques environnementaux.\nDans ce domaine comme dans bien d'autres, une puissante mécanique de « déni » étouffe à petit feu la perception de risques qui ne cessent pourtant de s'aggraver. Si ces processus d'accommodements ont permis, au cours de l'histoire, d'apprivoiser la peur des pollutions, ils semblent pourtant impuissants, aujourd'hui, à endiguer la crainte que suscite la dégradation irréversible de la biodiversité et du climat.\nLes enquêtes d'opinion montrent que la « fabrique du consentement » aux risques environnementaux est en train de s'épuiser : la peur est là, même si elle n'est pas forcément mauvaise conseillère.\nCette « heuristique de la peur » permet en effet, selon le philosophe Hans Jonas, de préparer efficacement l'avenir. La peur fonde et stimule la responsabilité sociale de ceux qui ont à décider. Elle est un moyen de prévenir, en l'imaginant, l'expérience d'un mal futur. Elle responsabilise, à la fois sur le plan du sentiment, par l'intuition qu'elle réveille, et sur le plan de l'intelligence, par la réflexion qu'elle ouvre sur la possibilité d'un danger rationnellement prévisible et sur ses conséquences.\nEst-ce cela qui engendre, ici et là, des projets vertueux destinés à lutter contre les dérèglements climatiques ? Est-ce grâce à ce sentiment souvent décrié que les citoyens prennent peu à peu conscience des dangers engendrés par la folle fuite en avant du progrès ? Est-ce cette crainte qui pousse aujourd'hui les sociétés occidentales à modifier une à une leurs habitudes de production, de consommation et de mobilité ?[cite: 1]`;
+
+    // Extracting all 58 verified questions from the source PDF images
+    const database = [
+        {
+            id: 1, p: p_insect,
+            q: "1. L'élevage d'insectes",
+            o: ["est encouragé par les associations d'agriculteurs.", "présente un intérêt écologique évident.", "permet de produire des protéines bon marché.", "⚠️ NEEDS REVIEW (Option manquante)"],
+            a: 1,
+            e: "L'article précise que les fermes à insectes présentent de nombreux avantages pour l'environnement par rapport aux élevages traditionnels, comme le fait d'avoir besoin de moins d'eau, de moins d'espace et de produire moins de gaz à effet de serre. Cela montre un intérêt écologique évident.[cite: 1]",
+            v: {"L'entomophagie": "the practice of eating insects", "Un coup de pouce": "a little help / a boost"}
+        },
+        {
+            id: 2, p: p_insect,
+            q: "2. Selon le chercheur Patrick Borel, manger des insectes est",
+            o: ["une habitude alimentaire qui suscite un engouement mondial.", "est un mode alimentaire usité qui provoque encore des réticences.", "est un marqueur culturel spécifique aux cultures africaines et asiatiques.", "est une pratique plébiscitée pour ses bienfaits thérapeutiques."],
+            a: 1,
+            e: "Le texte mentionne que l'entomophagie est déjà répandue (mode usité), mais Patrick Borel insiste sur la nécessité d'éduquer les populations, et en France, le gouvernement est 'encore hésitant' (réticences).[cite: 1]",
+            v: {"Usité": "customary / in use", "Réticences": "reluctance / hesitations"}
+        },
+        {
+            id: 3, p: p_num,
+            q: "3. La défenseure des droits dénonce",
+            o: ["la fragilisation accrue des personnes en difficulté.", "la complexité d'usage de la plateforme numérique.", "l'insuffisance de l'accueil dans les centres administratifs.", "les dépenses liées à l'achat de matériel pour les particuliers."],
+            a: 0,
+            e: "Claire Hédon met en avant que les plus précaires (personnes âgées, étrangers, non diplômés, ruraux) sont désavantagés par la dématérialisation. Elle parle même de maltraitance institutionnelle, car ces personnes ont plus de mal à accéder à leurs droits. Ce n'est donc pas seulement une question de technologie ou d'accueil, mais de fragilisation sociale accrue liée à l'exclusion numérique.[cite: 1]",
+            v: {"À marche forcée": "forced pace", "Précarité": "insecurity / vulnerability"}
+        },
+        {
+            id: 4, p: p_num,
+            q: "4. L'accès en ligne aux services administratifs",
+            o: ["est plébiscité par la plus grande partie de la population française.", "complexifie les démarches pour certaines catégories d'usagers.", "justifie des suppressions de postes dans la fonction publique.", "motive les citoyens à développer leurs compétences informatiques."],
+            a: 1,
+            e: "Le texte indique que l'obligation de recourir à Internet implique un effort particulier pour ceux qui manquent de matériel ou de savoirs, rendant l'accès aux droits plus difficile pour les personnes en situation de précarité. L'accès en ligne complexifie donc leurs démarches.[cite: 1]"
+        },
+        {
+            id: 5, p: p_feux,
+            q: "5. L'article démontre qu'il faut",
+            o: ["faire pousser davantage de bois pour le chauffage.", "financer les recherches sur les bienfaits des feux de végétation.", "respecter le cycle naturel de régénération de la forêt.", "utiliser de manière réfléchie les feux de végétation."],
+            a: 3,
+            e: "Le texte explique que les gestionnaires utilisent la science pour 'optimiser les avantages de tels feux' via des 'brûlages dirigés', et 'exploitent donc la force du feu naturel'. Cela démontre la nécessité d'une utilisation réfléchie et contrôlée des incendies.[cite: 1]",
+            v: {"Brûlages dirigés": "prescribed burns", "Aménagement forestier": "forest management"}
+        },
+        {
+            id: 6, p: p_feux,
+            q: "6. D'après l'article, les feux de végétation",
+            o: ["constituent un danger pour le renouvellement de la biodiversité.", "représentent une opportunité pour la gestion forestière.", "surviennent de moins en moins à proximité des zones habitées.", "contribuent à la régulation de la superficie des forêts."],
+            a: 1,
+            e: "L'article mentionne que les incendies participent à la régénération de l'écosystème et que les 'brûlages dirigés' constituent un 'précieux outil' pour améliorer les conditions écologiques. C'est donc une opportunité pour l'aménagement (gestion) forestier.[cite: 1]"
+        },
+        {
+            id: 7, p: p_medias,
+            q: "7. Selon cet article, les comportements agressifs sur internet",
+            o: ["restent tolérés par la plupart des réseaux sociaux.", "sont causés par des gens agissant consciemment.", "sont provoqués par des thèmes très polémiques.", "résultent d'une absence d'éducation aux médias."],
+            a: 1,
+            e: "L'article souligne que les comportements agressifs ne sont pas dus à l'ignorance, mais à des individus qui savent que leurs propos blessent et les utilisent délibérément.[cite: 1]"
+        },
+        {
+            id: 8, p: p_medias,
+            q: "8. Les recherches ont permis aux scientifiques de",
+            o: ["constater une plus grande agressivité dans les relations en ligne.", "remettre en cause les idées reçues sur l'agressivité en ligne.", "démontrer l'influence des réseaux sociaux sur la communication.", "démontrer le lien entre anonymat et agressivité."],
+            a: 1,
+            e: "Les chercheurs n'ont pas confirmé l'idée que la psychologie humaine fait que les gens sont plus agressifs en ligne à cause du manque d'interaction en face à face. Ils ont ainsi remis en question cette hypothèse courante, montrant que les comportements hostiles dépendent d'individus motivés par leur statut, pas du contexte en ligne.[cite: 1]"
+        },
+        {
+            id: 9, p: p_lefort,
+            q: "9. Le client de Maître Rivet",
+            o: ["propose une démarche de conciliation.", "réclame la mobilisation d'une commission de contrôle.", "exige une réponse par retour de courrier.", "demande une compensation pour le préjudice subi."],
+            a: 0,
+            e: "Le texte indique : 'mon client m'a demandé de rechercher avec vous une solution amiable visant au retrait des images litigieuses'. La recherche d'une 'solution amiable' correspond exactement à une démarche de conciliation.[cite: 1]",
+            v: {"Solution amiable": "amicable settlement", "Litigieux": "disputed / litigious"}
+        },
+        {
+            id: 10, p: p_lefort,
+            q: "10. Ce courrier a été adressé à Monsieur Lefort pour",
+            o: ["lui contester les préjudices d'une sanction judiciaire.", "l'appeler au respect de la législation en vigueur.", "l'informer d'une action en justice intentée contre lui.", "lui réclamer le règlement d'une infraction."],
+            a: 1,
+            e: "Le courrier l'informe qu'il utilise des œuvres protégées par le droit d'auteur sans autorisation, et l'invite à trouver une solution amiable avant une potentielle action. C'est un appel au respect de la loi sur les droits d'auteur.[cite: 1]"
+        },
+        {
+            id: 11, p: p_conflits,
+            q: "11. Qui évalue les situations de conflit d'intérêts déclarées ?",
+            o: ["Le service informatique.", "Le comité d'éthique.", "Le service de contrôle interne.", "La Direction des Ressources Humaines."],
+            a: 1,
+            e: "Le texte mentionne explicitement : 'suivie d'une évaluation par le comité d'éthique qui proposera des mesures adaptées'.[cite: 1]"
+        },
+        {
+            id: 12, p: p_conflits,
+            q: "12. Quel est le rôle principal de la déclaration des conflits d'intérêts ?",
+            o: ["Prévenir toute influence sur l'objectivité des décisions.", "Favoriser les relations familiales.", "Augmenter les participations financières.", "Accélérer les processus décisionnels."],
+            a: 0,
+            e: "Le texte précise : 'Afin de prévenir toute situation susceptible de compromettre l'objectivité des décisions, il est indispensable que chaque collaborateur identifie, déclare...'. L'objectif est donc de garantir l'objectivité.[cite: 1]"
+        },
+        {
+            id: 13, p: p_chomage,
+            q: "13. Selon ce document,",
+            o: ["l'entreprise peut rompre un contrat de travail sans préavis.", "l'entreprise peut verser une compensation financière au salarié.", "l'État peut pénaliser le dépassement de la durée légale de travail.", "l'employeur peut interrompre la rémunération des salariés."],
+            a: 1,
+            e: "Le texte précise qu'il permet aux salariés de 'recevoir de la part de leur employeur une indemnité visant à compenser la perte de rémunération'. L'employeur verse donc une compensation.[cite: 1]",
+            v: {"Indemnité": "compensation / allowance"}
+        },
+        {
+            id: 14, p: p_chomage,
+            q: "14. Ce message informe sur",
+            o: ["les conditions de rupture du contrat de travail.", "les possibilités de compensation financière pour les salariés.", "les droits au chômage lors de la perte d'un emploi.", "la limite du temps de travail lors d'une période chômée."],
+            a: 1,
+            e: "Le texte explique que, pendant une période d'activité partielle, le salarié reçoit une indemnité compensant la perte de rémunération due aux heures non travaillées. Il ne s'agit donc pas de licenciement ni de chômage complet, mais bien d'un dispositif de compensation financière.[cite: 1]"
+        },
+        {
+            id: 15, p: p_fille,
+            q: "15. La candidate pourra :",
+            o: ["participer à un événement culturel", "utiliser une langue étrangère", "assister à une formation en anglais", "passer du temps avec sa famille"],
+            a: 1,
+            e: "Elle dit qu'elle souhaite améliorer son anglais en travaillant à l'étranger, ce qui implique qu'elle va utiliser une langue étrangère (l'anglais) dans un contexte réel, et non suivre une formation formelle.[cite: 1]"
+        },
+        {
+            id: 16, p: p_fille,
+            q: "16. La candidate a une expérience dans le domaine",
+            o: ["de l'animation", "de l'entretien", "de la restauration", "de la médecine"],
+            a: 0,
+            e: "Elle indique qu'elle travaille dans un centre de loisirs depuis deux ans, ce qui correspond au domaine de l'animation (activités pour enfants).[cite: 1]"
+        },
+        {
+            id: 17, p: "[Graphique : Pratique d'une activité sportive selon le sexe et l'âge (%)]\n\n« Bien qu'on observe un écart considérable sur la première tranche d'âge, la tendance s'équilibre progressivement puis s'inverse jusqu'à rendre la différence minime parmi les personnes plus âgées. »[cite: 1]",
+            q: "17. Quel graphique correspond au commentaire suivant ?",
+            o: ["Graphique 1", "Graphique 2", "Graphique 3", "Graphique 4"],
+            a: 3,
+            e: "Le commentaire décrit une situation où l'écart est très grand au début, puis se réduit progressivement, et finit par s'inverser légèrement chez les personnes âgées. Le Graphique 4 est le seul qui montre un écart initial fort, puis un rapprochement, et enfin une inversion faible entre les deux courbes.[cite: 1]"
+        },
+        {
+            id: 18, p: "Fonction 1: La fonction de trésorier général s'exerce dans une perspective d'équilibre macroéconomique, où la gestion de la liquidité publique impose une articulation constante entre prévisions fiscales, émissions obligataires et pilotage prudentiel de la dette souveraine.\n\nFonction 2: La fonction de préfet dépasse la simple représentation étatique; elle implique une médiation territoriale, la gestion de crises multiscalaires et l'application de politiques nationales dans un tissu local souvent rétif aux logiques descendantes.\n\nFonction 3: La fonction d'inspecteur des finances, réputée pour son exigence analytique, vise à contrôler la régularité, mais aussi l'efficience des dépenses publiques, tout en contribuant, dans certaines configurations, à la formulation de réformes budgétaires structurelles.\n\nFonction 4: La fonction de directeur de cabinet, bien qu'éclipsée dans l'organigramme formel, concentre une part décisive de l'ingénierie décisionnelle, en articulant arbitrages politiques, contraintes administratives et jeux d'influence entre parties prenantes.[cite: 1]",
+            q: "18. Quelle fonction relève principalement du contrôle financier et de l'évaluation de la dépense publique ?",
+            o: ["Fonction 1", "Fonction 2", "Fonction 3", "Fonction 4"],
+            a: 2,
+            e: "La fonction 3 vise explicitement à 'contrôler la régularité, mais aussi l'efficience des dépenses publiques', ce qui correspond exactement à la question posée.[cite: 1]"
+        },
+        {
+            id: 19, p: "Restaurant 1: Restaurant idéal pour un dîner romantique avec une vue magnifique sur la ville de Montréal ! Notre cuisine est originale et à base de produits régionaux. Le menu « tout légumes » est très apprécié des personnes qui ne mangent ni viande, ni poisson.\n\nRestaurant 2: La cuisine proposée par notre jeune cuisinier brésilien est authentique et délicieuse de l'entrée jusqu'au dessert. Nos serveurs sont tous souriants et disponibles. En été, vous pouvez apprécier votre repas en terrasse en écoutant de la samba.\n\nRestaurant 3: Ici, on propose une cuisine classique pour un excellent rapport qualité-prix. C'est une très bonne adresse pour les amateurs de viande et de charcuterie.\n\nRestaurant 4: Nos deux jeunes cuisiniers travaillent exclusivement avec des produits frais. Le menu est imaginé chaque jour ! Le service est très professionnel et le restaurant a un petit salon calme pour les réunions.[cite: 1]",
+            q: "19. Quel restaurant propose un repas végétarien ?",
+            o: ["Restaurant 1", "Restaurant 2", "Restaurant 3", "Restaurant 4"],
+            a: 0,
+            e: "Le Restaurant 1 propose un menu 'tout légumes' pour les personnes 'qui ne mangent ni viande, ni poisson', ce qui définit un repas végétarien.[cite: 1]"
+        },
+        {
+            id: 20, p: "Film 1: Enzo vient d'un quartier pauvre. Employé dans un club de tennis fréquenté par des personnes riches, il est prêt à tout pour changer son destin et se fait remarquer par Lina, une ex-championne qui décide de l'aider.\n\nFilm 2: Un célèbre homme politique est accusé d'avoir tué son épouse, retrouvée morte dans une chambre d'hôtel au bord de la mer du Nord. Est-il coupable ou innocent ? Personne ne le sait. Et peut-être que lui non plus.\n\nFilm 3: Dans les années 1970, l'histoire vraie d'un petit garçon vivant au Liban avec sa famille. Il passe son temps à s'amuser avec ses copains, jusqu'à ce que la guerre civile éclate, mettant fin à l'innocence de l'enfance.\n\nFilm 4: Katia Lalande a été une très grande créatrice de roses. Aujourd'hui, elle est au bord de la faillite. Avec ses trois employés, elle se lance dans une aventure extraordinaire pour sauver sa petite exploitation artisanale.[cite: 1]",
+            q: "20. Lequel de ces films raconte une histoire criminelle ?",
+            o: ["Film 1", "Film 2", "Film 3", "Film 4"],
+            a: 1,
+            e: "Le Film 2 parle d'un homme politique accusé d'avoir 'tué son épouse', ce qui constitue le résumé classique d'une histoire criminelle/policière.[cite: 1]"
+        },
+        {
+            id: 21, p: "L'agence fédérale signale que si la population canadienne continue d'augmenter dans l'avenir, ce sera surtout grâce à [1] ____ qui devrait rester assez importante au cours des prochaines décennies. Celle-ci ne parvient toutefois pas à accroître de façon significative la proportion des jeunes dans la population, si bien que le Canada demeurera dépendant de l'extérieur pour assurer [2] ____ de sa population.[cite: 1]",
+            q: "21. (1)",
+            o: ["l'immigration", "la croissance naturelle", "la natalité élevée", "l'urbanisation rapide"],
+            a: 0,
+            e: "L'immigration est la cause principale de l'augmentation de la population dans ce contexte dépendant de 'l'extérieur'.[cite: 1]"
+        },
+        {
+            id: 22, p: "L'agence fédérale signale que si la population canadienne continue d'augmenter dans l'avenir, ce sera surtout grâce à [1] ____ qui devrait rester assez importante au cours des prochaines décennies. Celle-ci ne parvient toutefois pas à accroître de façon significative la proportion des jeunes dans la population, si bien que le Canada demeurera dépendant de l'extérieur pour assurer [2] ____ de sa population.[cite: 1]",
+            q: "22. (2)",
+            o: ["le renouvellement", "le vieillissement", "le remplacement des générations", "la croissance économique"],
+            a: 0,
+            e: "Le renouvellement fait référence au remplacement générationnel, c'est-à-dire maintenir une population stable en nombre malgré le vieillissement.[cite: 1]"
+        },
+        {
+            id: 23, p: "Les habitants qui font réparer leurs objets en panne reçoivent depuis 2 ans une prime. Une [1] ____ éco-responsable mise en place par la ville, qui tente de limiter le gaspillage. L'objectif : baisser la facture de réparation, et ainsi [2] ____ l'activité des artisans.[cite: 1]",
+            q: "23. (1)",
+            o: ["création", "démarche", "attitude", "demande"],
+            a: 1,
+            e: "Démarche éco-responsable est une expression courante pour désigner une action ou une politique respectueuse de l'environnement mise en place par une institution.[cite: 1]"
+        },
+        {
+            id: 24, p: "Les habitants qui font réparer leurs objets en panne reçoivent depuis 2 ans une prime. Une [1] ____ éco-responsable mise en place par la ville, qui tente de limiter le gaspillage. L'objectif : baisser la facture de réparation, et ainsi [2] ____ l'activité des artisans.[cite: 1]",
+            q: "24. (2)",
+            o: ["approuver", "confirmer", "soutenir", "autoriser"],
+            a: 2,
+            e: "Soutenir l'activité des artisans signifie aider à maintenir ou développer leur travail, ce qui correspond bien à l'idée de les encourager via une prime de réparation.[cite: 1]"
+        },
+        {
+            id: 25, p: "Phrase à compléter[cite: 1]",
+            q: "25. La rue peut être un lieu tout à fait indiqué pour ____ artistiques.",
+            o: ["établir", "définir", "proclamer", "encourager"],
+            a: 3,
+            e: "La phrase signifie que la rue est un bon endroit pour encourager l'expression de talents artistiques. Les autres verbes ne correspondent pas au sens de soutenir ou promouvoir l'art de rue.[cite: 1]"
+        },
+        {
+            id: 26, p: "Phrase à compléter[cite: 1]",
+            q: "26. Pendant la manifestation, les trains circuleront comme prévu. Cependant, le trafic des bus du réseau national sera ____.",
+            o: ["réquisitionné", "endommagé", "déplacé", "perturbé"],
+            a: 3,
+            e: "Le mot 'perturbé' est le plus adapté ici, car lors d'une manifestation, les transports comme les bus peuvent être affectés, ralentis ou modifiés dans leur fonctionnement normal.[cite: 1]"
+        },
+        {
+            id: 27, p: "Phrase à compléter[cite: 1]",
+            q: "27. Le Québec ____ quatre fois plus d'étudiants internationaux que le reste du pays.",
+            o: ["rencontre", "enlève", "reporte", "reçoit"],
+            a: 3,
+            e: "Le verbe 'reçoit' est le plus approprié ici, car il indique que le Québec accueille un grand nombre d'étudiants internationaux.[cite: 1]"
+        },
+        {
+            id: 28, p: "Phrase à compléter[cite: 1]",
+            q: "28. Avant de commencer une activité sportive, donnez-vous des ____.",
+            o: ["résultats", "objectifs", "idées", "projets"],
+            a: 1,
+            e: "Le mot 'objectifs' convient le mieux ici, car avant de commencer une activité sportive, on se fixe des buts à atteindre, comme améliorer sa forme ou courir une certaine distance.[cite: 1]"
+        },
+        {
+            id: 29, p: "Phrase à compléter[cite: 1]",
+            q: "29. Au Québec, les élèves ____ l'école à 7h30.",
+            o: ["trouvent", "écoutent", "commencent", "passent"],
+            a: 2,
+            e: "Le verbe qui complète correctement la phrase est 'commencent' car les élèves commencent l'école à 7h30, c'est-à-dire qu'ils débutent leurs cours à cette heure.[cite: 1]"
+        },
+        {
+            id: 30, p: "Phrase à compléter[cite: 1]",
+            q: "30. Elle porte une paire de ____ pour se protéger les mains.",
+            o: ["gants", "lunettes", "chaussures", "bottes"],
+            a: 0,
+            e: "On utilise des gants pour protéger les mains. Les autres options protègent d'autres parties du corps.[cite: 1]"
+        },
+        {
+            id: 31, p: "Des nuisances sonores excessives ayant été signalées à plusieurs reprises, nous rappelons que tout bruit gênant après 22h est interdit. Des contrôles aléatoires seront effectués. Les contrevenants s'exposent à des sanctions pouvant aller jusqu'à l'expulsion. Merci de respecter le règlement intérieur.[cite: 1]",
+            q: "31. Ce document est...",
+            o: ["Un avertissement comportemental assorti d'une menace.", "Une application renforcée d'une règle préexistante.", "Une note dissuasive à visée réglementaire.", "Une procédure précontentieuse à portée informative."],
+            a: 0,
+            e: "Le texte rappelle une règle existante et avertit clairement que des sanctions, y compris l'expulsion (menace), seront appliquées. C'est donc un avertissement avec une menace pour inciter au respect.[cite: 1]"
+        },
+        {
+            id: 32, p: "Le bureau des affaires sociales est désormais fusionné avec le guichet des aides au logement.\nLes usagers peuvent effectuer leurs démarches les lundis et jeudis, uniquement sur rendez-vous.\nLes demandes urgentes (expulsion imminente, coupure d'eau ou d'électricité) doivent être signalées à l'accueil avec justificatif.\nUn nouveau formulaire en ligne est disponible à partir du 5 septembre sur montreal-services.ca.[cite: 1]",
+            q: "32. Ce document est...",
+            o: ["Un règlement interne.", "Une consigne d'urgence.", "Une notice administrative.", "Une plainte officielle."],
+            a: 2,
+            e: "Le document informe les usagers des nouvelles modalités pour effectuer leurs démarches, des jours disponibles, et de la mise en place d'un formulaire. Ce type d'information correspond à une notice administrative destinée à guider le public.[cite: 1]"
+        },
+        {
+            id: 33, p: "Depuis la disparition soudaine de leur tante Suzanne, les réunions du dimanche n'avaient plus la même saveur.\nC'est toujours Mireille, l'aînée, qui tenait à perpétuer les traditions, mais le cœur n'y était plus.\nJulien, le cadet, avait déménagé à Québec, et Léa, absorbée par son nouveau travail en soins palliatifs, ne répondait plus aux invitations.\nSeule Mamie Simone semblait immuable, fidèle au vieux fauteuil vert, attendant silencieusement que tout revienne comme avant.[cite: 1]",
+            q: "33. Ce document est...",
+            o: ["un récit professionnel", "une biographie informelle", "une lettre nostalgique", "une narration familiale"],
+            a: 3,
+            e: "Le texte raconte une situation personnelle et intime, centrée sur une famille, ses habitudes, et l'évolution de leurs relations après un décès. Il s'agit clairement d'un récit à caractère familial.[cite: 1]"
+        },
+        {
+            id: 34, p: "Suisse - Neufchâtel (centre-ville), superbe appartement, cinq pièces, trois chambres, deux salles de bain, cuisine équipée, grand balcon avec très belle vue, disponible le 1er septembre.\n2800 francs par mois, eau et électricité non comprises.\nA voir absolument ![cite: 1]",
+            q: "34. Ce message propose",
+            o: ["de profiter d'un séjour.", "de visiter un site touristique.", "de louer un logement.", "d'acheter un article."],
+            a: 2,
+            e: "Le texte décrit un appartement à louer avec ses caractéristiques, son prix mensuel (2800 francs) et sa disponibilité, ce qui correspond à une offre de location de logement.[cite: 1]"
+        },
+        {
+            id: 35, p: "PARTICIPEZ À NOTRE CONCOURS!\nDans le cadre du Festival “Montréal en lumières”, gagnez 4 billets pour “Ari Cui-Cui et les patins magiques” ce dimanche 20 février à 15h au Théâtre de la ville.\nParticipez avant le jeudi 17 février à 17h et dîtes nous avec qui vous voulez assister à la représentation.\nBonne chance![cite: 1]",
+            q: "35. Ce document propose",
+            o: ["une vente de tickets à prix réduit.", "une rencontre avec une star.", "un jeu pour voir un spectacle.", "un événement réservé à des abonnés."],
+            a: 2,
+            e: "Le texte invite les lecteurs à participer à un concours (jeu) pour gagner des billets, ce qui permet d'assister à un spectacle au théâtre.[cite: 1]"
+        },
+        {
+            id: 36, p: "Attention : en raison d'un afflux important de commandes pendant la période promotionnelle, les délais de traitement peuvent être prolongés jusqu'à 72 h.\nNous faisons le maximum pour assurer les expéditions dans les meilleurs délais. Merci de votre patience.[cite: 1]",
+            q: "36. Ce document est :",
+            o: ["une mesure de gestion prévisionnelle de crise.", "une communication d'anticipation commerciale.", "un ajustement contextuel d'une promesse de service.", "un aveu de dégradation temporaire de la prestation."],
+            a: 2,
+            e: "Le message informe les clients que, en raison d'un contexte exceptionnel (fortes commandes), les délais habituels (promesse de service) peuvent être allongés. L'entreprise ajuste donc temporairement sa promesse de service.[cite: 1]"
+        },
+        {
+            id: 37, p: "Lapins nains !\nJe vends deux petits lapins de quatre mois. Ils sont nés à la ferme, entourés d'autres animaux. Ils ont besoin d'une nouvelle maison car nous partons à l'étranger !\nIls sont affectueux avec les humains et ils aiment le contact avec les hamsters et les souris.\nSi vous êtes une personne sérieuse qui aime s'occuper des animaux, contactez-nous au : 00.01.02.03.04[cite: 1]",
+            q: "37. Ce document propose",
+            o: ["d'acheter des animaux de compagnie.", "de s'occuper d'animaux malades.", "de participer à une visite de la ferme.", "de garder des animaux pendant les vacances."],
+            a: 0,
+            e: "L'annonce parle de deux lapins à vendre ('Je vends...') qui cherchent une nouvelle maison. Cela montre qu'il s'agit d'une proposition pour acheter des animaux de compagnie.[cite: 1]"
+        },
+        {
+            id: 38, p: p_peur,
+            q: "38. D'après l'auteur, la peur :",
+            o: ["entrave l'action en exagérant le danger.", "invite à remettre en cause certaines hypothèses.", "permet de visualiser la menace pour mieux l'éviter.", "déclenche des réactions chaotiques face à l'urgence."],
+            a: 2,
+            e: "Le texte évoque l'heuristique de la peur comme un outil positif : elle permet d'anticiper les dangers, de réfléchir aux conséquences possibles et donc de préparer l'avenir ('prévenir, en l'imaginant'). La peur responsabilise et stimule l'action réfléchie.[cite: 1]"
+        },
+        {
+            id: 39, p: p_peur,
+            q: "39. La crainte engendre :",
+            o: ["un sentiment de culpabilité chez les citoyens.", "la prise de décision des gouvernements.", "la résignation à un déclin inexorable.", "l'adoption de comportements engagés."],
+            a: 3,
+            e: "Le texte suggère que la peur face à la dégradation environnementale peut avoir un effet positif : elle stimule la responsabilité et encourage des actions concrètes (projets vertueux, modifications d'habitudes de consommation). Cela correspond à l'adoption de comportements engagés.[cite: 1]"
+        },
+        {
+            id: 40, p: "Gérer les litiges de consommation\n\nLa médiation entre consommateurs et professionnels constitue une alternative efficiente et préférable aux procédures judiciaires, favorisant une résolution amiable des litiges. Le professionnel doit informer le consommateur des coordonnées du médiateur compétent, via son site web, conditions de vente, bons de commande, ou autres supports appropriés. Si un litige survient sans résolution directe, cette information reste essentielle. Si un médiateur couvre un domaine économique entier, ses coordonnées doivent également être fournies. La médiation est gratuite pour le consommateur, les coûts étant supportés par le professionnel. Seul le consommateur peut lancer cette médiation, qui doit être résolue dans les 90 jours suivant sa notification. Pour les litiges complexes, ce délai peut s'étendre. Les parties en sont informées.[cite: 1]",
+            q: "40. Il appartient au professionnel d' :",
+            o: ["assumer la charge financière liée à la médiation.", "appeler l'organisme de médiation approprié.", "appuyer financièrement le consommateur.", "initier la démarche de médiation avant le consommateur."],
+            a: 0,
+            e: "Le texte précise que la médiation est gratuite pour le consommateur et que les coûts sont 'supportés par le professionnel'. Ainsi, c'est à ce dernier d'assumer la charge financière. Seul le consommateur peut initier la démarche.[cite: 1]"
+        },
+        {
+            id: 41, p: "Gérer les litiges de consommation\n\nLa médiation entre consommateurs et professionnels constitue une alternative efficiente et préférable aux procédures judiciaires, favorisant une résolution amiable des litiges. Le professionnel doit informer le consommateur des coordonnées du médiateur compétent, via son site web, conditions de vente, bons de commande, ou autres supports appropriés. Si un litige survient sans résolution directe, cette information reste essentielle. Si un médiateur couvre un domaine économique entier, ses coordonnées doivent également être fournies. La médiation est gratuite pour le consommateur, les coûts étant supportés par le professionnel. Seul le consommateur peut lancer cette médiation, qui doit être résolue dans les 90 jours suivant sa notification. Pour les litiges complexes, ce délai peut s'étendre. Les parties en sont informées.[cite: 1]",
+            q: "41. L'objectif principal du texte est :",
+            o: ["de préciser les coûts des différents types de contestations.", "de proposer aux professionnels des moyens pour éviter les litiges.", "de présenter le processus de conciliation en cas de contentieux.", "de présenter les responsabilités pénales du consommateur."],
+            a: 2,
+            e: "Le texte explique clairement comment la médiation peut être utilisée pour résoudre un litige (contentieux) de manière amiable, en détaillant les étapes, les acteurs concernés, la gratuité et les délais.[cite: 1]"
+        },
+        {
+            id: 42, p: "Madame Damiens,\n\nSuite à l'étude de votre Recours Administratif Préalable concernant l'avis de paiement N°2134017 nous vous informons que votre demande est acceptée.\n\nLes détenteurs d'une carte d'invalidité bénéficient de 24h consécutives de stationnement gratuit sur les places payantes sur voirie à Montpellier.\n\nNéanmoins, le stationnement payant de la Ville implique l'enregistrement du véhicule sur un horodateur ou une application mobile de paiement puisque sa durée est limitée. Aussi, afin de prévenir l'émission d'une contravention sans avoir à vous enregistrer à l'horodateur pour chaque stationnement, vous pouvez déclarer votre véhicule en ligne sur www.tam-voyages.com.\n\nSi vous avez déjà payé cette contravention, merci de nous transmettre vos coordonnées bancaires complètes afin que nous puissions vous restituer la somme indûment perçue.[cite: 1]",
+            q: "42. Elle doit envoyer ses identifiants bancaires pour :",
+            o: ["enregistrer son véhicule sur le site de la Mairie.", "être remboursée du montant de l'amende.", "acheter un forfait pour le stationnement en ville.", "pouvoir payer son amende sans majoration."],
+            a: 1,
+            e: "Le texte demande d'envoyer les coordonnées bancaires uniquement si la contravention a déjà été payée, 'afin de restituer la somme indûment perçue', c'est-à-dire pour un remboursement (amende).[cite: 1]"
+        },
+        {
+            id: 43, p: "Madame Damiens,\n\nSuite à l'étude de votre Recours Administratif Préalable concernant l'avis de paiement N°2134017 nous vous informons que votre demande est acceptée.\n\nLes détenteurs d'une carte d'invalidité bénéficient de 24h consécutives de stationnement gratuit sur les places payantes sur voirie à Montpellier.\n\nNéanmoins, le stationnement payant de la Ville implique l'enregistrement du véhicule sur un horodateur ou une application mobile de paiement puisque sa durée est limitée. Aussi, afin de prévenir l'émission d'une contravention sans avoir à vous enregistrer à l'horodateur pour chaque stationnement, vous pouvez déclarer votre véhicule en ligne sur www.tam-voyages.com.\n\nSi vous avez déjà payé cette contravention, merci de nous transmettre vos coordonnées bancaires complètes afin que nous puissions vous restituer la somme indûment perçue.[cite: 1]",
+            q: "43. Madame Damiens reçoit ce courrier car :",
+            o: ["elle a demandé un abonnement pour le stationnement.", "elle a déposé une plainte suite à une contravention.", "elle a refusé de s'acquitter des frais de stationnement.", "elle a effectué une demande de réservation de parking."],
+            a: 1,
+            e: "Le courrier mentionne l'étude d'un 'Recours Administratif Préalable' lié à un avis de paiement pour stationnement, ce qui correspond à une contestation ou plainte déposée contre une contravention.[cite: 1]"
+        },
+        {
+            id: 44, p: "L'immatriculation consulaire\n\nL'immatriculation consulaire est une formalité administrative qui concerne les Algériens résidant régulièrement dans un pays étranger. Elle constitue un préalable pour bénéficier de la protection consulaire et des différentes prestations fournies par les représentations consulaires.\nLa carte d'immatriculation consulaire est délivrée gratuitement. Elle est valable cinq (5) ans; son renouvellement doit être demandé. Les personnes souhaitant se faire immatriculer pour la première fois, doivent obligatoirement se présenter au siège du consulat couvrant leur lieu de résidence.\nLes enfants mineurs (moins de 19 ans) sont immatriculés à la demande du titulaire de l'autorité parentale. En cas de divorce, il est obligatoire de présenter le jugement de divorce.\nAprès l'immatriculation, tout changement de situation (état civil, adresse, profession, etc.) doit être signalé au consulat en fournissant les justificatifs correspondants.\nUn droit de timbre de deux (02) euros est requis pour l'établissement d'une attestation d'immatriculation.[cite: 1]",
+            q: "44. Quelle affirmation est correcte ?",
+            o: ["La carte consulaire est renouvelée automatiquement tous les cinq ans.", "L'immatriculation consulaire est exigée uniquement pour les adultes.", "La carte consulaire est exigée aux personnes résidant en terre étrangère.", "L'établissement d'une carte consulaire est exempt de frais."],
+            a: 2,
+            e: "Le texte précise que l'immatriculation consulaire concerne 'les Algériens résidant régulièrement dans un pays étranger'. Le renouvellement n'est pas automatique, et elle concerne aussi les mineurs.[cite: 1]"
+        },
+        {
+            id: 45, p: "L'immatriculation consulaire\n\nL'immatriculation consulaire est une formalité administrative qui concerne les Algériens résidant régulièrement dans un pays étranger. Elle constitue un préalable pour bénéficier de la protection consulaire et des différentes prestations fournies par les représentations consulaires.\nLa carte d'immatriculation consulaire est délivrée gratuitement. Elle est valable cinq (5) ans; son renouvellement doit être demandé. Les personnes souhaitant se faire immatriculer pour la première fois, doivent obligatoirement se présenter au siège du consulat couvrant leur lieu de résidence.\nLes enfants mineurs (moins de 19 ans) sont immatriculés à la demande du titulaire de l'autorité parentale. En cas de divorce, il est obligatoire de présenter le jugement de divorce.\nAprès l'immatriculation, tout changement de situation (état civil, adresse, profession, etc.) doit être signalé au consulat en fournissant les justificatifs correspondants.\nUn droit de timbre de deux (02) euros est requis pour l'établissement d'une attestation d'immatriculation.[cite: 1]",
+            q: "45. L'immatriculation consulaire...",
+            o: ["Peut être utilisée pour régler les dépenses engagées par le citoyen.", "Permet de se faire délivrer son passeport dans la minute.", "Disculpe l'auteur d'un délit en terre étrangère.", "Garantit un accès aux droits et aux services consulaires."],
+            a: 3,
+            e: "L'immatriculation consulaire permet d'avoir accès à la protection consulaire et aux 'différentes prestations fournies par les représentations consulaires', comme garanti dans le texte.[cite: 1]"
+        },
+        {
+            id: 46, p: "Musicien - 3 postes\n\nVous jouez de la musique sur nos différents sites pour une durée de 30 à 60 minutes sur chaque site.\nVous êtes habitué à une clientèle à mobilité réduite et souffrant de problèmes de mémoire.\nLe bénévole devra se déplacer dans les espaces collectifs (restauration) et individuels (chambres) des résidents, et il doit donc faire preuve d'un immense respect.\nPrise en charge des déplacements entre le domicile et les lieux d'intervention prévue par l'organisme.\nRepas offert lors des missions en extérieur (2 sorties collectives annuelles).[cite: 1]",
+            q: "46. Les futurs bénévoles obtiendront :",
+            o: ["une aide financière au transport.", "des invitations à des concerts.", "un repas gratuit par jour.", "une prime deux fois par an."],
+            a: 0,
+            e: "Le texte mentionne que la 'prise en charge des déplacements entre le domicile et les lieux d'intervention [est] prévue par l'organisme', ce qui correspond à une aide financière au transport.[cite: 1]"
+        },
+        {
+            id: 47, p: "Musicien - 3 postes\n\nVous jouez de la musique sur nos différents sites pour une durée de 30 à 60 minutes sur chaque site.\nVous êtes habitué à une clientèle à mobilité réduite et souffrant de problèmes de mémoire.\nLe bénévole devra se déplacer dans les espaces collectifs (restauration) et individuels (chambres) des résidents, et il doit donc faire preuve d'un immense respect.\nPrise en charge des déplacements entre le domicile et les lieux d'intervention prévue par l'organisme.\nRepas offert lors des missions en extérieur (2 sorties collectives annuelles).[cite: 1]",
+            q: "47. Les bénéficiaires de ce service ont :",
+            o: ["des difficultés à se déplacer.", "des problèmes de vue.", "des crises d'anxiété.", "des maladies respiratoires."],
+            a: 0,
+            e: "Le texte précise que la clientèle est 'à mobilité réduite', ce qui signifie qu'elle a des difficultés à se déplacer.[cite: 1]"
+        },
+        {
+            id: 48, p: "[Graphique : Nombre de victoires au Grand Prix de Formule 1 cette année (par pilote)]\n\n« Au Grand Prix cette saison: le meneur s'est nettement démarqué tandis que deux des pilotes se qualifient à la seconde place du podium. L'ancien champion du monde termine tout de même en troisième position suivie de près par les autres. »[cite: 1]",
+            q: "48. Quel graphique correspond au commentaire suivant ?",
+            o: ["Graphique 1", "Graphique 2", "Graphique 3", "Graphique 4"],
+            a: 2,
+            e: "*(Note d'examen: Le corrigé officiel pointe vers le Graphique 3 bien que l'explication fournie dans la source soit liée à un autre sujet 'transport fluvial' par erreur du concepteur d'examen original. Le corrigé visuel PDF désigne C comme la réponse correcte).*[cite: 1]"
+        },
+        {
+            id: 49, p: "Spectacle 1 : Assistez à Nantes à un spectacle unique! Danseurs, musiciens et artistes de renommée se produiront pour une soirée inoubliable.\nSpectacle 2 : Ne manquez pas un spectacle d'acrobates époustouflant au musée de Nantes!\nSpectacle 3 : Venez découvrir un opéra grandiose à Nantes ! Des voix envoûtantes...\nSpectacle 4 : Venez à Nantes découvrir un spectacle urbain exceptionnel, à ciel ouvert ! Acrobates, jongleurs et musiciens vous enchanteront avec leurs talents éblouissants. Rendez-vous samedi à 18h place Royale...[cite: 1]",
+            q: "49. Quel évènement est un spectacle de rue ?",
+            o: ["Spectacle 1", "Spectacle 2", "Spectacle 3", "Spectacle 4"],
+            a: 3,
+            e: "Le spectacle 4 se déroule 'à ciel ouvert', sur la 'place Royale' et est qualifié de 'spectacle urbain', ce qui définit parfaitement un spectacle de rue.[cite: 1]"
+        },
+        {
+            id: 50, p: "Offre 1 : Dans le cadre de notre expansion récente, nous recherchons actuellement un Expert-comptable...\nOffre 2 : Vous aimez le sport ? Dynamique et souriant vous savez convaincre ? Vous êtes disponible pour des déplacements au niveau international ? Dans le cadre du développement de notre entreprise, nous recherchons un représentant en ventes sur toute la zone Europe.\nOffre 3 : Nous recherchons pour notre agence spécialisée, plusieurs conseillers emploi et carrière h/f.\nOffre 4 : Nous recherchons, dans le cadre de l'ouverture d'une agence spécialisée dans le secteur de la restauration, un(e) Responsable d'agence.[cite: 1]",
+            q: "50. Quelle offre d'emploi propose un poste de commercial ?",
+            o: ["Offre 1", "Offre 2", "Offre 3", "Offre 4"],
+            a: 1,
+            e: "L'offre 2 cherche un 'représentant en ventes', ce qui est clairement un poste de commercial impliquant la capacité de convaincre.[cite: 1]"
+        },
+        {
+            id: 51, p: "Phrase à compléter[cite: 1]",
+            q: "51. Pour rester en bonne santé, ____ des fruits et des légumes.",
+            o: ["vendez", "préparez", "achetez", "mangez"],
+            a: 3,
+            e: "Le verbe 'mangez' est le plus logique ici, car il s'agit d'un conseil pour rester en bonne santé. Manger des fruits et des légumes est directement lié à une alimentation équilibrée.[cite: 1]"
+        },
+        {
+            id: 52, p: "Annonce 1 : La troisième édition du festival itinérant « Marocains rigolos » se poursuit à Tanger... Venez découvrir une sélection d'artistes passionnés, ancrés dans la tradition de l'humour maghrébin !\nAnnonce 2 : Le Grand Théâtre de Bruxelles propose une découverte de « Marchons ensemble », un opéra moderne.\nAnnonce 3 : Chaque année, Alger a le plaisir d'accueillir la troupe du Cirque des Étoiles.\nAnnonce 4 : Comme chaque année, la ville de Bordeaux organise un festival autour du piano.[cite: 1]",
+            q: "52. Quelle annonce présente un événement comique ?",
+            o: ["Annonce 1", "Annonce 2", "Annonce 3", "Annonce 4"],
+            a: 0,
+            e: "L'annonce 1 présente un festival intitulé 'Marocains rigolos' dédié à 'l'humour'. C'est donc clairement un événement comique (humoristique).[cite: 1]"
+        },
+        {
+            id: 53, p: "Texte 1 : La tresse raconte trois moments dans la vie de trois femmes...\nTexte 2 : Trois femmes, trois vies, trois continents. Une même soif de liberté...\nTexte 3 : Le premier roman de la cinéaste et actrice française Laetitia Colombani...\nTexte 4 : Trois histoires qui s'entrelacent, se révèlent entre les lignes de ce roman prenant. Sans pathos, mais infiniment touchante, La tresse est une histoire de solidarité, pleine de charme. On se reconnaît dans les trois protagonistes attachantes et combatives. Le style est efficace, les descriptions très poétiques et l'histoire bien rythmée.[cite: 1]",
+            q: "53. Lequel de ces textes est une critique littéraire ?",
+            o: ["Texte 1", "Texte 2", "Texte 3", "Texte 4"],
+            a: 3,
+            e: "Le Texte 4 donne un avis argumenté sur le roman : il juge le style, le rythme, les personnages ('attachantes'), et utilise un ton subjectif ('prenant', 'touchante'), ce qui en fait une véritable critique littéraire contrairement aux simples résumés.[cite: 1]"
+        },
+        {
+            id: 54, p: "Les cryptomonnaies\nLongtemps réduites au rang de curiosité, les monnaies numériques font depuis quelques années les gros titres de la presse. Et pour cause : le [1] ________ de l'une des plus connues, le bitcoin, a quadruplé au semestre précédent, avant de [2] ________ et de perdre plus du tiers de sa valeur.[cite: 1]",
+            q: "54. (1)",
+            o: ["poids", "chiffre", "coût", "taux"],
+            a: 3,
+            e: "Taux est le mot approprié pour parler de la variation de valeur ou de prix d'une monnaie (taux de change).[cite: 1]"
+        },
+        {
+            id: 55, p: "Les cryptomonnaies\nLongtemps réduites au rang de curiosité, les monnaies numériques font depuis quelques années les gros titres de la presse. Et pour cause : le [1] ________ de l'une des plus connues, le bitcoin, a quadruplé au semestre précédent, avant de [2] ________ et de perdre plus du tiers de sa valeur.[cite: 1]",
+            q: "55. (2)",
+            o: ["tomber", "baisser", "grimper", "plonger"],
+            a: 3,
+            e: "Plonger est le verbe très spécifique souvent utilisé pour décrire une chute brutale et soudaine de valeur sur les marchés financiers.[cite: 1]"
+        },
+        {
+            id: 56, p: "Le poisson-escargot a été découvert au large des côtes du Japon. Il nageait à plus de 8000 mètres sous le niveau de la mer. Les scientifiques [1] ________ que ce nouveau record d'observation d'un poisson à une telle profondeur ne sera pas [2] ________ ou de très peu, car la pression y est 800 fois plus élevée qu'à la surface.[cite: 1]",
+            q: "56. (1)",
+            o: ["demandent", "pensent", "entendent", "font"],
+            a: 1,
+            e: "On utilise 'pensent' parce que les scientifiques donnent leur avis, leur conviction ou leur hypothèse sur la pérennité du record.[cite: 1]"
+        },
+        {
+            id: 57, p: "Le poisson-escargot a été découvert au large des côtes du Japon. Il nageait à plus de 8000 mètres sous le niveau de la mer. Les scientifiques [1] ________ que ce nouveau record d'observation d'un poisson à une telle profondeur ne sera pas [2] ________ ou de très peu, car la pression y est 800 fois plus élevée qu'à la surface.[cite: 1]",
+            q: "57. (2)",
+            o: ["battu", "défait", "compte", "vendu"],
+            a: 0,
+            e: "On choisit 'battu' car on parle d'un record, et en français, un record est 'battu' (c'est-à-dire dépassé).[cite: 1]"
+        },
+        {
+            id: 58, p: "Phrase à compléter[cite: 1]",
+            q: "58. Chacun de nous est régulièrement ________ et peut s'en trouver dérangé, ou pas, par des appels téléphoniques commerciaux.",
+            o: ["dépisté", "dérouté", "sollicité", "obsédé"],
+            a: 2,
+            e: "Dans ce contexte, les appels commerciaux 'sollicitent' les gens, c'est-à-dire les contactent pour proposer activement quelque chose.[cite: 1]"
+        }
+    ];
+
+    // --- APP LOGIC --- //
+    let currentMode = 'order'; 
+    let activeList = [];
+    let currentIndex = 0;
+    
+    // Scoring & Tracking
+    let score = 0;
+    let attempted = 0;
+    let mistakesSet = new Set();
+    let examUserAnswers = []; 
+
+    function setMode(mode) {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`mode-${mode}`).classList.add('active');
+        
+        currentMode = mode;
+        score = 0;
+        attempted = 0;
+        examUserAnswers = [];
+        
+        document.getElementById('quiz-ui').classList.remove('hidden');
+        document.getElementById('exam-ui').classList.add('hidden');
+        
+        if (mode === 'order') {
+            activeList = [...database];
+            currentIndex = 0;
+            document.getElementById('submit-exam-btn').classList.add('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        } else if (mode === 'random') {
+            activeList = [...database].sort(() => 0.5 - Math.random());
+            currentIndex = 0;
+            document.getElementById('submit-exam-btn').classList.add('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        } else if (mode === 'exam') {
+            // Full exam mode: random 25 questions as a realistic set
+            activeList = [...database].sort(() => 0.5 - Math.random()).slice(0, 25);
+            currentIndex = 0;
+            document.getElementById('submit-exam-btn').classList.remove('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        } else if (mode === 'review') {
+            activeList = [...mistakesSet].map(id => database.find(q => q.id === id)).filter(Boolean);
+            currentIndex = 0;
+            document.getElementById('submit-exam-btn').classList.add('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+            if(activeList.length === 0) {
+                alert("Vous n'avez aucune erreur enregistrée ! Bravo.");
+                setMode('order');
+                return;
+            }
+        }
+        
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if(currentIndex < 0) currentIndex = 0;
+        if(currentIndex >= activeList.length) currentIndex = activeList.length - 1;
+        if(activeList.length === 0) return;
+
+        const q = activeList[currentIndex];
+        
+        // Update stats
+        document.getElementById('q-progress').innerText = `Question ${currentIndex + 1} / ${activeList.length}`;
+        let accuracy = attempted > 0 ? Math.round((score / attempted) * 100) : 0;
+        document.getElementById('score-tracker').innerText = currentMode === 'exam' 
+            ? "Mode Examen - Les réponses sont cachées" 
+            : `Score: ${score} | Exactitude: ${accuracy}%`;
+
+        document.getElementById('passage').innerText = q.p;
+        document.getElementById('question').innerText = q.q;
+        
+        const optionsBox = document.getElementById('options');
+        optionsBox.innerHTML = '';
+        
+        const letters = ['A.', 'B.', 'C.', 'D.'];
+        q.o.forEach((optText, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = `${letters[index]} ${optText}`;
+            
+            // Check if user already answered this in exam mode
+            if (currentMode === 'exam' && examUserAnswers[currentIndex] === index) {
+                btn.style.borderColor = "var(--accent)";
+                btn.style.backgroundColor = "#ebf5fb";
+            }
+            
+            btn.onclick = () => selectOption(index, btn);
+            optionsBox.appendChild(btn);
+        });
+
+        // Hide explanation by default
+        document.getElementById('explanation').style.display = 'none';
+        
+        // Disable Nav appropriately
+        document.getElementById('prev-btn').disabled = currentIndex === 0;
+        
+        if (currentMode === 'exam') {
+            document.getElementById('next-btn').disabled = currentIndex === activeList.length - 1;
+        } else {
+            // Need to disable Next if not answered? For practice, we allow browsing.
+            document.getElementById('next-btn').disabled = currentIndex === activeList.length - 1;
+        }
+    }
+
+    function selectOption(selectedIndex, btnElement) {
+        const q = activeList[currentIndex];
+        const buttons = document.querySelectorAll('.option-btn');
+
+        if (currentMode === 'exam') {
+            examUserAnswers[currentIndex] = selectedIndex;
+            buttons.forEach(b => { b.style.borderColor = ""; b.style.backgroundColor = ""; });
+            btnElement.style.borderColor = "var(--accent)";
+            btnElement.style.backgroundColor = "#ebf5fb";
+            return; // Don't evaluate immediately in exam mode
+        }
+
+        // Standard Practice Modes
+        buttons.forEach(b => b.disabled = true);
+        attempted++;
+        
+        if (selectedIndex === q.a) {
+            btnElement.classList.add('correct');
+            score++;
+            showExplanation(true, q);
+            // If in review mode, mark as learned (optional: remove from mistakes)
+        } else {
+            btnElement.classList.add('incorrect');
+            buttons[q.a].classList.add('correct');
+            mistakesSet.add(q.id);
+            showExplanation(false, q);
+        }
+        
+        let accuracy = Math.round((score / attempted) * 100);
+        document.getElementById('score-tracker').innerText = `Score: ${score} | Exactitude: ${accuracy}%`;
+    }
+
+    function showExplanation(isCorrect, qData) {
+        const expBox = document.getElementById('explanation');
+        const expTitle = document.getElementById('exp-title');
+        const expContent = document.getElementById('exp-content');
+        
+        expBox.style.display = 'block';
+        if (isCorrect) {
+            expTitle.innerHTML = '✅ Correct !';
+            expTitle.style.color = 'var(--success)';
+        } else {
+            expTitle.innerHTML = '❌ Incorrect';
+            expTitle.style.color = 'var(--error)';
+        }
+        
+        expContent.innerText = qData.e;
+        
+        // Vocab Section
+        const vocabSec = document.getElementById('vocab');
+        const vocabList = document.getElementById('vocab-list');
+        if (qData.v) {
+            vocabSec.classList.remove('hidden');
+            vocabList.innerHTML = '';
+            for (let word in qData.v) {
+                vocabList.innerHTML += `<div class="vocab-item"><strong>${word}</strong> &rarr; ${qData.v[word]}</div>`;
+            }
+        } else {
+            vocabSec.classList.add('hidden');
+        }
+    }
+
+    function navQuestion(direction) {
+        currentIndex += direction;
+        loadQuestion();
+    }
+
+    function submitExam() {
+        if (!confirm("Voulez-vous vraiment soumettre votre examen ?")) return;
+        
+        let examScore = 0;
+        let breakdownHTML = '';
+        
+        activeList.forEach((q, idx) => {
+            const uAns = examUserAnswers[idx];
+            if (uAns === q.a) {
+                examScore++;
+            } else {
+                mistakesSet.add(q.id);
+                const uAnsText = uAns !== undefined ? q.o[uAns] : "Non répondu";
+                breakdownHTML += `
+                    <div style="background:#fff; padding:15px; border-left:4px solid #e74c3c; margin-bottom:15px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <strong>Question ${idx + 1}:</strong> ${q.q}<br><br>
+                        <span style="color:#e74c3c">✗ Votre réponse: ${uAnsText}</span><br>
+                        <span style="color:#27ae60">✓ Bonne réponse: ${q.o[q.a]}</span><br>
+                        <p style="margin-top:10px; font-size:0.9em; background:#f9f9f9; padding:10px;"><em>Explication:</em> ${q.e}</p>
+                    </div>`;
+            }
+        });
+
+        document.getElementById('quiz-ui').classList.add('hidden');
+        document.getElementById('exam-ui').classList.remove('hidden');
+        
+        const pct = Math.round((examScore / activeList.length) * 100);
+        document.getElementById('final-score').innerText = `${examScore} / ${activeList.length} (${pct}%)`;
+        document.getElementById('final-stats').innerText = `Vous avez fait ${activeList.length - examScore} erreur(s).`;
+        document.getElementById('mistakes-breakdown').innerHTML = breakdownHTML;
+    }
+
+    // Initialize
+    window.onload = () => setMode('order');
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEF Canada - Interactive Reading Practice (Q59-Q127)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #ecf0f1;
+            --panel-bg: #ffffff;
+            --text: #333333;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 0; line-height: 1.6; }
+        header { background-color: var(--primary); color: white; padding: 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        header h1 { margin: 0; font-size: 24px; }
+        .nav-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; padding: 15px; background-color: var(--secondary); }
+        .nav-btn { background-color: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
+        .nav-btn:hover { background-color: #2980b9; }
+        .nav-btn.active { background-color: #f1c40f; color: #333; }
+        
+        .main-container { display: flex; max-width: 1300px; margin: 20px auto; gap: 20px; padding: 0 15px; }
+        @media(max-width: 900px) { .main-container { flex-direction: column; } }
+        
+        .panel { background-color: var(--panel-bg); border-radius: 8px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); flex: 1; }
+        .passage-panel { flex: 1.2; overflow-y: auto; max-height: 75vh; }
+        .passage-text { white-space: pre-wrap; font-size: 1.05em; }
+        
+        .question-panel { flex: 1; display: flex; flex-direction: column; }
+        .stats-bar { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 20px; color: var(--secondary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; }
+        .question-text { font-size: 1.2em; font-weight: bold; margin-bottom: 20px; color: var(--primary); }
+        
+        .options-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .option-btn { text-align: left; background-color: #f8f9fa; border: 2px solid #bdc3c7; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1em; transition: all 0.2s ease; }
+        .option-btn:hover:not(:disabled) { border-color: var(--accent); background-color: #ebf5fb; }
+        .option-btn:disabled { cursor: default; }
+        .option-btn.correct { background-color: #eafaf1; border-color: var(--success); color: #1e8449; font-weight: bold; }
+        .option-btn.incorrect { background-color: #fdedec; border-color: var(--error); color: #c0392b; }
+        
+        .explanation-box { background-color: #fff9e6; border-left: 5px solid #f1c40f; padding: 15px 20px; margin-bottom: 20px; border-radius: 0 8px 8px 0; display: none; }
+        .explanation-box h3 { margin-top: 0; display: flex; align-items: center; gap: 10px; }
+        
+        .controls { display: flex; justify-content: space-between; margin-top: auto; }
+        .control-btn { background-color: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .control-btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        
+        .hidden { display: none !important; }
+        .exam-results { text-align: center; padding: 40px; }
+        .exam-results h2 { font-size: 2em; margin-bottom: 10px; }
+        .score-display { font-size: 3em; font-weight: bold; color: var(--accent); margin: 20px 0; }
+        .mistakes-list { text-align: left; margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Interactive TEF Reading Practice (Q59 - Q127)</h1>
+</header>
+
+<div class="nav-bar">
+    <button class="nav-btn active" id="mode-order" onclick="setMode('order')">Practice in Order</button>
+    <button class="nav-btn" id="mode-random" onclick="setMode('random')">Random Practice</button>
+    <button class="nav-btn" id="mode-exam" onclick="setMode('exam')">Full Exam Mode</button>
+    <button class="nav-btn" id="mode-review" onclick="setMode('review')">Review My Mistakes</button>
+</div>
+
+<div id="quiz-ui" class="main-container">
+    <div class="panel passage-panel">
+        <div id="passage" class="passage-text"></div>
+    </div>
+    
+    <div class="panel question-panel">
+        <div class="stats-bar" id="stats-bar">
+            <span id="q-progress">Question 59 / X</span>
+            <span id="score-tracker">Score: 0 | Accuracy: 0%</span>
+        </div>
+        
+        <div id="question" class="question-text"></div>
+        <div id="options" class="options-container"></div>
+        
+        <div id="explanation" class="explanation-box">
+            <h3 id="exp-title"></h3>
+            <div id="exp-content"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="prev-btn" class="control-btn" onclick="navQuestion(-1)">Précédent</button>
+            <button id="submit-exam-btn" class="control-btn hidden" onclick="submitExam()">Soumettre l'examen</button>
+            <button id="next-btn" class="control-btn" onclick="navQuestion(1)">Suivant</button>
+        </div>
+    </div>
+</div>
+
+<div id="exam-ui" class="main-container hidden">
+    <div class="panel exam-results">
+        <h2>Résultats de l'examen</h2>
+        <div class="score-display" id="final-score"></div>
+        <p id="final-stats"></p>
+        <button class="control-btn" onclick="setMode('review')">Review Mistakes</button>
+        <button class="control-btn" onclick="setMode('order')" style="margin-left: 10px;">Restart Practice</button>
+        <div id="mistakes-breakdown" class="mistakes-list"></div>
+    </div>
+</div>
+
+<script>
+    // --- TEXTES RÉCURRENTS --- //
+    const p_cantine = `La cantine, nouveau lieu d'affrontement\n\nDepuis qu'elle est mise en scène par la télé-réalité, la cuisine s'est ennoblie au point de devenir une pratique distinctive. À l'autre extrémité de l'espace social et symbolique, la cantine scolaire semble condamnée à la médiocrité.\n\nPourtant, dans tous les établissements scolaires de France, les chefs de cantine ont le droit et le pouvoir de proposer à leur direction des fournisseurs locaux qu'ils ont choisi au lieu de s'en remettre aux industriels de l'agroalimentaire. Des diététiciens participent à l'élaboration des menus et arbitrent entre les produits et saveurs plébiscités par les enfants et des pratiques nutritionnelles vertueuses. En effet, chez certains jeunes le surpoids voire l'obésité se combinent à des carences nutritionnelles.\n\nConfrontés à ce problème de santé, les industriels du secteur, la main sur le cœur, créent des labels, signent des chartes et des engagements avec les élus. Un travail de communication et de marketing installe la confusion en jouant sur les mots: parler de « qualité » et de « durabilité » pour ne pas aborder l'agriculture biologique, évoquer le « local » en l'appliquant à la France entière plutôt qu'à de vrais circuits courts. La restauration scolaire pose des questions inextricablement sanitaires et environnementales. Il s'agit de choisir entre une production industrielle appauvrissant les sols et nécessitant un transport routier aussi long que polluant et une production locale et artisanale.\n\nTrès loin du verdissement artificiel des menus, des diététiciens et des cuisiniers recourent à des circuits locaux. Aller chercher dans sa région des producteurs fiables constitue une première étape, mais cette démarche ne prend vraiment sens que si elle s'articule à un travail en cuisine. Si les usages en matière de produits et d'approvisionnement restent cependant difficiles à infléchir, c'est parce que la restauration collective représente un marché gigantesque aux rouages bien huilés.[cite: 3]`;
+    const p_esprit = `Avoir l'esprit tranquille est-il un pur fantasme?\n\nLe niveau zéro stress est-il atteignable ou est-ce une publicité mensongère ? Les turpitudes de l'existence que nous ressentons à l'intérieur peuvent-elles disparaître un jour? Cela paraît largement utopique.\n\nAujourd'hui, chacun a en tête son éden, mais pour beaucoup, bien plus qu'un lieu de liberté, celui-ci ressemble davantage à un cocon de calme et de sérénité. Et, pour atteindre ce paradis, toutes sortes de moyens sont proposés: les bien nommés tranquillisants, mais aussi la méditation, le jogging qui libère des endorphines bienvenues pour s'apaiser.\n\nDans cette course à la paix, certains sont plus radicaux, cherchant carrément à disparaître de la carte sociétale.\n\nCes arpenteurs de déserts qui souvent ont construit une vie au milieu de nulle part ne sont en rien des vagabonds ou des fuyards mais bien plutôt les porteurs d'un réel projet d'autonomie. Un grand nombre d'entre eux recréent une communauté, et restent connectés à l'actualité via Internet! Leur intranquillité, qu'ils ont finalement emmenée avec eux, se transforme même parfois en une forme de légère paranoïa vis-à-vis de ce qui se passe dans le monde.\n\nCependant, vivre, c'est être fondamentalement intranquille. Soit. Mais entre anxiété et acceptation passive de notre essentielle insécurité psychologique, comment s'en sortir? En agissant aussi souvent que possible dans une forme d'empathie et de vigilance aux mouvements de la vie. Tout sauf l'inaction et le grand calme donc.\n\nC'est un équilibre à trouver, d'une certaine manière, nous devons à la fois lutter contre ce qui provoque de l'intranquillité en nous - nos représentations anxieuses, nos illusions - tout en restant vivants.[cite: 3]`;
+    const p_start_up = `Plainte à l'encontre d'une start-up\n\nUn groupe d'ONG a annoncé saisir les autorités de plusieurs pays d'Europe contre Coralis, start-up américaine à la technologie de reconnaissance faciale appréciée des polices mais controversée.\n\nDans leurs plaintes, le groupe dévoile l'utilisation par Coralis d'un "dispositif automatisé de récupération d'images", qui parcourt Internet et extrait toutes les images de visages humains détectées.\n\nÀ l'aide d'un algorithme, ces images sont ensuite traitées pour créer une base de données biométriques dont l'accès est vendu "à la police et à des sociétés privées dans divers pays", déplorent les plaignants.\n\nUn juriste observe que la loi européenne sur la protection des données est très claire sur les finalités pour lesquelles une compagnie peut utiliser nos données. Selon lui, extraire nos caractéristiques faciales uniques, et les partager avec la police et d'autres groupes, va entièrement à l'encontre de ce à quoi un utilisateur d'internet peut s'attendre.\n\nUn rapport du Commissariat canadien à la protection de la vie privée avait estimé que Coralis a exercé au Canada une "surveillance de masse" illégale. Selon ce rapport, l'entreprise américaine avait constitué une base de données de "plus de trois milliards d'images de visages". La société s'est retirée du marché canadien au cours de l'enquête.\nD'après RTBF.be[cite: 3]`;
+    const p_mode = `Le droit, un défi majeur pour les jeunes designers de mode\n\nL'univers de la mode est un monde de rêves. Pourtant, derrière cette façade, et au-delà des enjeux liés à l'économie et aux industries créatives, le droit se révèle un défi majeur. En effet, si les défilés de mode sont, dans le milieu, des sortes de célébrations où l'on consacre les créations des plus grandes maisons de couture, pour le monde juridique ces événements rentrent plutôt dans la catégorie des spectacles vivants. Et ils réveillent ainsi un grand nombre de questionnements, qui vont des droits de l'homme jusqu'aux problématiques plus économiques comme le droit de la concurrence. Parmi eux, la question de la protection du droit d'auteur et de la propriété intellectuelle s'avère particulièrement sensible. Dans le monde de la mode, quelle est la définition de la création, et comment encadrer cette dernière ? Le droit d'auteur protège toute création quelle que soit sa forme dès lors qu'elle répond à deux critères: la concrétisation formelle de l'œuvre et son originalité. [...] Et c'est surtout le critère d'originalité qui continue de cultiver une forme de flou, car même si la définition du terme s'applique à toutes les créations protégées par le droit d'auteur, l'originalité garde des caractéristiques qui sont propres au monde de la mode.[cite: 3]`;
+    const p_fonds = `Création d'un nouveau fonds pour l'urgence climatique\n\nNous avons le plaisir d'annoncer la création d'un nouveau fonds, doté de 15 millions d'euros, destiné à développer la capacité de résilience des populations vulnérables face aux catastrophes climatiques, en partenariat avec des organisations spécialisées.\n\nLes catastrophes liées au climat ont quintuplé au cours des 50 dernières années. Aujourd'hui, près de trois milliards de personnes vivent dans des zones à risques.\n\nLe fonds sera orienté vers la « prévention », pour contribuer à minimiser l'impact des catastrophes climatiques avant qu'elles ne surviennent grâce à des systèmes de planification et d'alerte précoce; et la « reconstruction », afin de restaurer après de telles catastrophes les infrastructures essentielles et les services vitaux tels que les soins de santé, le logement...[cite: 3]`;
+    const p_psy = `Pour un suivi psychologique\n\nPlusieurs départements et communes expérimentent actuellement la prise en charge des consultations de psychologues par la sécurité sociale avec des conditions restrictives:\n- sur prescription et contrôle du médecin traitant,\n- pour des troubles et des populations spécifiques préalablement déterminés,\n- avec un nombre de séances maximum imposé.\n\nSi ces mesures reconnaissent, enfin, le rôle essentiel des psychologues face à ces enjeux fondamentaux de santé publique, elles restent très décalées par rapport aux besoins réels de la population.\n\nNous accueillons favorablement la prise en charge des consultations des psychologues par la sécurité sociale, et nous demandons à ce qu'elles aient lieu sans prescription médicale, pour tous et sur tout le territoire pour une durée qui corresponde aux besoins du patient![cite: 3]`;
+    const p_cn = `Au sein de notre compagnie de transport, Canadien National, offrir un cadre de travail sans danger est une priorité. Nous souhaitons devenir le meilleur chemin de fer de l'Amérique du Nord.\n\nAssurons-nous de mettre en œuvre quelques mesures préventives sur les voies:\n- enlever les obstacles qui risqueraient d'être dangereux\n- vérifier la stabilité du sol\n- éliminer la terre pour éviter qu'elle ne gèle en hiver\n\nNous souhaitons que nos employés retournent chez eux sain et sauf après le travail. Ce principe s'applique aussi à nos clients: nous faisons tout pour que vos marchandises soient traitées avec soin.[cite: 3]`;
+    const p_madame = `Madame,\n\nNous avons étudié votre dossier et nous vous informons que celui-ci répond aux conditions d'admission pour occuper des emplois au sein du ministère de la culture.\n\nToutefois, veuillez noter que cette décision demeure assujettie à l'envoi de l'attestation de réussite émise par votre université.\n\nDans l'attente que votre profil soit considéré pour un emploi, il est de votre responsabilité de tenir votre dossier à jour en nous informant de tout changement à vos coordonnées.\n\nNous vous prions d'agréer, Madame, nos salutations distinguées.[cite: 3]`;
+    const p_collegues = `Chers collègues,\n\nJe m'adresse à vous à propos de la communication autour de la plateforme d'apprentissage que nous venons d'adopter. Il me semble important de mettre en commun nos efforts pour explorer ses possibilités d'utilisation; de même que nous devons continuer d'utiliser les médias déjà existants.\n\nDe plus, il serait utile d'avoir une explication plus détaillée du fonctionnement de la plateforme. Malheureusement, cela ne nous a pas été présenté lors de nos derniers échanges. Parlons-en donc lors d'une prochaine réunion.\n\nBien à vous,\nXX[cite: 3]`;
+    const p_ia = `Face à l'urgence climatique, une sainte alliance mondiale s'est nouée autour d'une conviction. Celle d'un grand basculement du monde en ligne pour le bien de la planète. "À tel point que l'on considère de plus en plus qu'il ne sera pas possible de maîtriser le changement climatique sans un recours massif au numérique", souligne l'association The Shift Project, qui ne partage pas ce point de vue.\n\nUne nouvelle doctrine promeut le salut par les villes "intelligentes", bourrées de capteurs et de véhicules électriques autonomes. Cette croyance peut compter sur d'efficaces partisans pour qui « les émissions évitées via l'utilisation des technologies de l'information et de la communication sont près de dix fois plus importantes que celles générées par le déploiement de ces technologies ».\n\nInternet modèle un monde où l'activité humaine stricto sensu n'est plus la seule à animer l'univers numérique. « Les ordinateurs et objets communiquent entre eux sans intervention humaine. La production de données n'est plus cantonnée à une action de notre part », confirme Mike Hazas, professeur à l'université de Lancaster. Ce phénomène génère bien entendu un impact environnemental sans que nous soyons capables de le calculer, voire de le contrôler. Une question dérangeante se pose: en fait d'activité numérique, les robots pourraient-ils laisser un jour une trace écologique plus profonde encore que celle des humains ?\n\nQuels seront les impacts écologiques d'un monde dans lequel des essaims de véhicules autonomes marauderont, vides, à travers des cités endormies, et où des armadas de logiciels en découdront sur le Web, vingt-quatre heures par jour, tandis que nous vaquerons à nos loisirs ? Ils seront colossaux - probablement plus considérables que l'ensemble de la pollution numérique d'origine humaine. Aussi, se concentrer sur les répercussions de nos comportements numériques risque de s'avérer vain et illusoire.[cite: 3]`;
+    const p_meteorites = `Les perles noires du désert\n\nUn véritable commerce s'est développé autour de ces fragments célestes arrivés sur Terre après une chute fracassante et faisant du Maroc un des premiers pays exportateurs au monde. De nombreux nomades ont fait de la chasse aux météorites leur métier puisqu'aucune loi ne protège le patrimoine géologique du Maroc. Un projet a tout de même été déposé auprès du ministère des Mines et de l'Environnement, mais il est resté lettre morte. En Algérie par exemple, la collecte de météorites est interdite. Mais au lieu d'interdire, il faudrait réglementer la collecte, les exports, et se doter de structures comme un musée national des météorites. Car, si les spécimens marocains ne sont pas regroupés au sein d'une structure dédiée, ils risquent de se perdre dans des collections privées. Et si le Maroc ne voit pas encore l'intérêt de collecter et préserver ces perles noires du désert, d'autres acteurs moins scrupuleux le devanceront, comme la Meteorical Society qui a décidé d'organiser son prochain congrès, pour la première fois, dans un pays arabe.[cite: 3]`;
+    const p_abeilles = `Installer des ruches dans les grandes villes, une bonne idée ?\n\nC'est une question qui fait débat dans le milieu de l'apiculture urbaine. Il est couramment admis que les villes offrent plusieurs avantages notables par rapport aux campagnes. D'abord, on ne trouve que très peu de pesticides, puis il y a une variété d'espèces végétales plus importante qu'en zone rurale. Et finalement, il y fait un peu plus chaud: 1 ou 2 degrés de plus, ce qui permet aux colonies d'abeilles de butiner plus longtemps. On se rend compte que la ville est un environnement qui convient bien aux abeilles.\n\nLe nombre de ruches dans les villes grandit chaque année et pourtant le nombre d'espaces verts, lui, n'augmente que très peu. Des études ont montré que l'effondrement général de la production de miel urbain est en lien direct avec la multiplication rapide du nombre de ruches. Cela s'explique par un seuil de densité trop vite atteint menant à une baisse de la production des abeilles, notamment en raison de ressources florales arrivées à leurs limites. L'effet positif des villes sur la production de miel tend à décroître au fil des années.[cite: 3]`;
+    const p_zebu = `Chez Plan Zébu, nous vous invitons à investir dans un Zébu à Madagascar. Il sera cédé en location aux paysans les plus démunis qui n'ont accès à aucune autre source de financement. Ils pourront l'utiliser pour produire du lait, labourer la terre et faire naître des petits.\n\nTout en favorisant l'agriculture biologique et l'élevage traditionnel, Plan Zébu met en place un système de financement original où l'investisseur est en relation avec l'utilisateur des fonds placés. Nous espérons que vous lui rendrez visite pour lui caresser le nez et vous enquérir de sa bonne santé ![cite: 3]`;
+    const p_assurance = `Chers collègues,\n\nJe reviens vers vous pour vous informer que, comme annoncé il y a un an, notre société d'assurance s'engage dans une logique vertueuse d'augmentation progressive et régulière de la rémunération de tous ses agents. Ainsi, les honoraires d'expertises seront augmentés en moyenne de 10% (de 9,5 à 10,5% selon les catégories d'interventions). Les forfaits liés aux déplacements extramuros sont également revus à la hausse (de 15 à 30%). Le détail de cette grille tarifaire vous sera envoyé très prochainement avec les nouveaux contrats valables pour cette année.[cite: 3]`;
+    const p_beaux_arts = `Les Beaux-Arts\n\nLes Beaux-Arts de Paris ont pour mission d'assurer d'une part un enseignement des arts plastiques préparant à la création artistique. D'autre part, ils participent à la conservation du patrimoine et de ses collections. Établissement public doté d'un budget annuel de 13,5M€, les Beaux-Arts comptent un effectif de 209 personnes. L'institution est l'une des plus anciennes et prestigieuses écoles d'art françaises et internationales. Environ 650 élèves y suivent leurs études. Elle a pour ambition d'être un acteur de référence dans le milieu des arts plastiques, des idées et de la culture.[cite: 3]`;
+
+    const database = [
+        {
+            id: 59, p: "Phrase à compléter",
+            q: "59. Son ______ témoignait de la précipitation avec laquelle Rolin était venu.",
+            o: ["Halètement", "Harcèlement", "Dilemme", "Respiration"],
+            a: 0,
+            e: "Dans ce contexte, 'halètement' ou 'respiration' sont des termes liés à la manière dont une personne souffle, mais 'halètement' est plus approprié, car il évoque un souffle court et rapide, indiquant une grande précipitation ou un effort.[cite: 3]"
+        },
+        {
+            id: 60, p: "Phrase à compléter",
+            q: "60. La médiathèque permet de ______ quatre DVD pour trois semaines.",
+            o: ["l'emprunt", "l'achat", "la donation", "le retour"],
+            a: 0,
+            e: "Dans une médiathèque, on peut emprunter des DVD pour une durée limitée. Les autres options (achat, donation, retour) ne correspondent pas au fait de garder temporairement les DVD.[cite: 3]"
+        },
+        {
+            id: 61, p: "Phrase à compléter",
+            q: "61. Le matin, la majorité des adolescents préfèrent ______ léger.",
+            o: ["cuire", "manger", "marcher", "couper"],
+            a: 1,
+            e: "L'expression correcte est 'manger léger', c'est-à-dire prendre un repas léger. Les autres verbes ne s'emploient pas naturellement avec 'léger' dans ce contexte.[cite: 3]"
+        },
+        {
+            id: 62, p: "Phrase à compléter",
+            q: "62. Nos locaux sont devenus trop petits, nous ______ le mois prochain.",
+            o: ["habitons", "déménageons", "déplaçons", "allons"],
+            a: 1,
+            e: "Quand des locaux deviennent trop petits, on parle généralement de déménager (changer de lieu). Les autres options ne conviennent pas.[cite: 3]"
+        },
+        {
+            id: 63, p: "Améliorez la qualité de votre sommeil\n\nNe restez pas seul·e face à vos difficultés: venez en parler!\nCet atelier vous proposera des outils simples et efficaces que vous pourrez utiliser chez vous, en toute autonomie.\nInformez-vous sur les différentes causes de l'insomnie. Apprenez à maintenir une bonne hygiène du sommeil et à mieux comprendre les cycles veille-sommeil.\nEt surtout, découvrez des techniques de relaxation pour retrouver un sommeil réparateur.[cite: 3]",
+            q: "63. L'atelier permet de:",
+            o: ["pratiquer la méditation en groupe.", "connaître l'importance du sommeil.", "comprendre la relation entre alimentation et sommeil.", "découvrir des techniques pour mieux dormir."],
+            a: 3,
+            e: "L'atelier propose des outils simples et efficaces pour mieux dormir, aborde l'hygiène du sommeil, les cycles veille-sommeil et la relaxation. Il s'agit donc clairement de découvrir des techniques pour mieux dormir.[cite: 3]"
+        },
+        {
+            id: 64, p: "OBJECTIF 100 MILLIONS D'ARBRES À PLANTER\n\nBeauté.com s'engage aux côtés de la Fondation Pour La Vie à préserver la biodiversité et lutter pour la protection de l'environnement. Pour un shampooing et un gel douche achetés, un arbre sera planté.\nGrâce à vous, plus de 90 millions d'arbres ont déjà été plantés dans 30 pays.[cite: 3]",
+            q: "64. Ce document:",
+            o: ["propose d'adhérer à la Fondation Pour la Vie.", "informe sur les actions d'une entreprise.", "offre des cours de jardinage dans plusieurs pays.", "invite les clients à planter un arbre chez eux."],
+            a: 1,
+            e: "Le texte décrit l'engagement d'une entreprise à planter des arbres à chaque achat, ce qui informe sur ses actions en faveur de l'environnement.[cite: 3]"
+        },
+        {
+            id: 65, p: "Attachez-le à la vie\n\nPour bien protéger votre enfant, attachez-le correctement dans un siège d'auto pour enfants ou un siège d'appoint. Ne lui enlevez pas trop tôt ! Beaucoup d'enfants sont encore blessés ou tués dans un accident parce qu'ils sont trop petits pour être protégés seulement par la ceinture de sécurité.[cite: 3]",
+            q: "65. Ce message recommande:",
+            o: ["de placer l'enfant sur le siège avant.", "d'acheter un nouveau siège pour bébé.", "de respecter le code de la route.", "de prendre plus de précautions."],
+            a: 3,
+            e: "Le texte insiste sur l'importance d'attacher correctement les enfants dans un siège adapté pour éviter les blessures en cas d'accident, ce qui relève d'une recommandation de prendre plus de précautions.[cite: 3]"
+        },
+        {
+            id: 66, p: "Vous avez besoin d'énergie ?\n\nProfitez des bienfaits du magnésium avec Saint-Antonin!\nParticulièrement riche en magnésium, l'eau minérale Saint-Antonin vous aide à lutter efficacement contre la fatigue et le stress.\nEt si vous l'aimez pour son prix, vous l'aimerez aussi pour son goût![cite: 3]",
+            q: "66. Ce document:",
+            o: ["recommande un médicament.", "fait la promotion d'une boisson.", "avertit des dangers du stress.", "annonce un service de santé."],
+            a: 1,
+            e: "Le texte vante les bienfaits de l'eau minérale Saint-Antonin, notamment sa richesse en magnésium. Il s'agit donc clairement de la promotion d'une boisson, et non d'un médicament.[cite: 3]"
+        },
+        {
+            id: 67, p: "Qui nettoie votre bureau quand vous partez en vacances?\n\nAVEC SERVICE MÉNAGE, NOUS VENONS DIRECTEMENT DANS VOTRE ENTREPRISE!\nComme nous savons que vos besoins en matière de ménage sont importants, nous vous offrons nos services pour vous simplifier la vie !\nPour en savoir plus: 0820 00 2288[cite: 3]",
+            q: "67. Ce service propose aux entreprises de s'occuper:",
+            o: ["de la décoration.", "de l'organisation.", "du rangement.", "de la propreté."],
+            a: 3,
+            e: "Le texte parle de services de ménage dans les bureaux, ce qui concerne directement la propreté des lieux, et non la décoration, l'organisation ou le simple rangement.[cite: 3]"
+        },
+        {
+            id: 68, p: "Salut Caroline,\n\nÇa va? Ça te dit de venir chez moi le week-end prochain? On pourrait faire une randonnée en montagne et un pique-nique au bord d'un lac !\n\nBises,\nLucas[cite: 3]",
+            q: "68. Ce message propose:",
+            o: ["une sortie en nature.", "une réunion de travail.", "un repas au restaurant.", "une activité culturelle."],
+            a: 0,
+            e: "Le message parle d'une randonnée en montagne et d'un pique-nique au bord d'un lac, ce qui correspond clairement à une sortie en nature.[cite: 3]"
+        },
+        {
+            id: 69, p: "SERVICE CONSOMMATEURS DE LA POSTE\n\nChers clients, pour tous renseignements, vous pouvez nous joindre:\n→ Par Internet: www.laposte.fr\n→ Par téléphone: 3631\n→ Par courrier:\nSERVICE CONSOMMATEURS\n99999 LA POSTE[cite: 3]",
+            q: "69. D'après La Poste :\nCe document liste différents moyens pour",
+            o: ["commander un produit.", "régler ses achats.", "contacter un service.", "ouvrir un compte postal."],
+            a: 2,
+            e: "Le document donne les coordonnées pour joindre le service consommateurs de La Poste par différents moyens (Internet, téléphone, courrier). Il s'agit donc d'informations pour contacter un service.[cite: 3]"
+        },
+        {
+            id: 70, p: p_cantine,
+            q: "70. L'auteur dénonce:",
+            o: ["les artifices commerciaux utilisés par l'industrie agroalimentaire.", "le désengagement des chefs d'établissement face à la gestion des cantines.", "le manque de traçabilité des produits biologiques.", "la main mise des producteurs locaux sur les cantines scolaires."],
+            a: 0,
+            e: "L'auteur critique clairement les stratégies de communication et de marketing des industriels, qui utilisent des termes comme « qualité », « durabilité » ou « local » de manière trompeuse pour masquer la réalité de leur production.[cite: 3]"
+        },
+        {
+            id: 71, p: p_cantine,
+            q: "71. Cet article traite:",
+            o: ["des obstacles à l'évolution de la restauration collective durable.", "de l'incapacité des cantines à proposer une nouvelle offre culinaire.", "des difficultés à modifier les habitudes alimentaires des enfants.", "des abus du secteur agroalimentaire dans son offre de produits."],
+            a: 0,
+            e: "L'article met en avant les efforts de certains acteurs pour améliorer la restauration scolaire mais souligne aussi les difficultés structurelles, économiques et industrielles qui freinent une réelle évolution vers une alimentation plus durable.[cite: 3]"
+        },
+        {
+            id: 72, p: p_esprit,
+            q: "72. D'après le texte, la technologie:",
+            o: ["favorise la paix intérieure.", "représente un moyen de méditation.", "incarne une extension de l'Homme.", "symbolise un retour à la réalité."],
+            a: 2,
+            e: "Le texte mentionne que les \"arpenteurs de déserts\" restent connectés à l'actualité via Internet, ce qui indique que la technologie, loin d'être un facteur de paix intérieure, fait plutôt partie d'un projet de vie autonome où les individus utilisent des outils technologiques pour rester informés... Cela suggère que la technologie est perçue comme une extension de l'Homme.[cite: 3]"
+        },
+        {
+            id: 73, p: p_esprit,
+            q: "73. D'après le texte, l'être humain:",
+            o: ["doit trouver son harmonie spirituelle.", "se complait dans son anxiété.", "s'épanouit dans ses relations humaines.", "doit intérioriser ses tourments."],
+            a: 0,
+            e: "Le texte évoque l'idée que vivre, c'est être fondamentalement intranquille. Cependant, l'être humain doit trouver un équilibre en agissant avec empathie et vigilance. Ce processus implique de trouver une forme d'harmonie dans la gestion de son intranquillité (harmonie spirituelle).[cite: 3]"
+        },
+        {
+            id: 74, p: p_start_up,
+            q: "74. Suite aux poursuites, la société",
+            o: ["a dû prouver qu'elle avait supprimé toutes les images.", "a abandonné certaines de ses cibles commerciales.", "a modifié toutes ses conditions d'utilisation.", "a dû révéler les détails de son algorithme."],
+            a: 1,
+            e: "Le texte indique que Coralis s'est retirée du marché canadien à la suite de l'enquête menée contre elle, ce qui signifie qu'elle a abandonné ce marché comme cible commerciale. C'est cette action qui correspond à l'option correcte.[cite: 3]"
+        },
+        {
+            id: 75, p: p_start_up,
+            q: "75. Les ONG en question.",
+            o: ["s'inquiètent de l'utilisation politique de la reconnaissance faciale.", "dénoncent une marchandisation des données personnelles.", "demandent la suppression des fichiers biométriques constitués par la police.", "réclament l'harmonisation de la législation de protection des données."],
+            a: 1,
+            e: "Les ONG dénoncent le fait que Coralis utilise les images de visages extraites d'Internet pour créer une base de données vendue ensuite à des polices et sociétés privées. Cette critique vise spécifiquement la commercialisation des données biométriques (marchandisation).[cite: 3]"
+        },
+        {
+            id: 76, p: p_mode,
+            q: "76. Dans le milieu de la mode, faire appliquer le droit d'auteur est complexe car:",
+            o: ["la concurrence doit jouer librement.", "les créateurs ont des statuts variés.", "l'œuvre peut rester abstraite.", "la singularité de la réalisation doit être reconnue."],
+            a: 3,
+            e: "Le texte insiste sur le fait que l'application du droit d'auteur repose notamment sur le critère d'originalité, qui reste flou et difficile à définir dans le monde de la mode. Cela implique que la reconnaissance de la singularité de chaque création est un enjeu central et complexe.[cite: 3]"
+        },
+        {
+            id: 77, p: p_fonds,
+            q: "77. Ce fonds servira à :",
+            o: ["optimiser les projets environnementaux existants.", "stimuler la croissance économique locale.", "renforcer la résistance des populations fragiles.", "encourager l'innovation technologique."],
+            a: 2,
+            e: "Le texte précise que le fonds vise à développer la capacité de résilience des populations vulnérables face aux catastrophes climatiques, ce qui correspond à renforcer leur résistance.[cite: 3]"
+        },
+        {
+            id: 78, p: p_mode,
+            q: "78. Pour le monde juridique, l'univers de la mode:",
+            o: ["se laisse facilement étudier.", "se limite à la question des droits d'auteur.", "suscite des débats variés.", "est assimilé à un divertissement populaire."],
+            a: 2,
+            e: "Le texte souligne que pour le monde juridique, les défilés sont vus comme des spectacles vivants, et ils soulèvent de nombreuses questions allant des droits de l'homme au droit de la concurrence, ce qui indique que l'univers de la mode suscite des débats variés.[cite: 3]"
+        },
+        {
+            id: 79, p: p_fonds,
+            q: "79. Par ce communiqué, l'entreprise s'attache à:",
+            o: ["encourager les initiatives en faveur des populations à risque.", "informer de potentielles organisations partenaires.", "trouver des investisseurs pour son nouveau fonds.", "montrer son engagement face au changement climatique."],
+            a: 3,
+            e: "Le communiqué met en avant la création d'un fonds pour répondre aux enjeux climatiques, ce qui montre clairement l'engagement de l'entreprise face au changement climatique.[cite: 3]"
+        },
+        {
+            id: 80, p: p_psy,
+            q: "80. Les auteurs de la pétition revendiquent...",
+            o: ["la reconnaissance de la psychologie comme discipline médicale.", "l'assouplissement des critères d'accès aux consultations.", "l'amélioration du dialogue entre médecins généralistes et psychologues.", "l'augmentation des aides de l'État pour payer les consultations."],
+            a: 1,
+            e: "Les auteurs demandent que les consultations soient prises en charge sans prescription médicale, ce qui correspond à un assouplissement des critères d'accès aux consultations.[cite: 3]"
+        },
+        {
+            id: 81, p: p_psy,
+            q: "81. Les auteurs de ce document...",
+            o: ["saluent un progrès limité.", "dénigrent un programme pilote.", "réprouvent un projet de loi.", "ironisent sur la situation actuelle."],
+            a: 0,
+            e: "Le texte reconnaît positivement la prise en charge des consultations par la sécurité sociale, mais souligne que les conditions restrictives sont insuffisantes par rapport aux besoins réels, donc c'est un progrès limité.[cite: 3]"
+        },
+        {
+            id: 82, p: p_cn,
+            q: "82. Les mesures préventives:",
+            o: ["permettent un travail sécuritaire aux équipes.", "servent à éviter les accidents entre trains.", "aident à anticiper les phénomènes météorologiques.", "ne concernent pas les colis des clients."],
+            a: 0,
+            e: "Les mesures décrites visent à garantir un cadre de travail sûr pour les équipes (\"Nous souhaitons que nos employés retournent chez eux sain et sauf\"), ce qui correspond à la première option.[cite: 3]"
+        },
+        {
+            id: 83, p: p_cn,
+            q: "83. Le Canadien National:",
+            o: ["assure le bon fonctionnement des trains.", "souhaite avoir le monopole du transport public.", "compte sur la collaboration de ses clients.", "fait de la sécurité une valeur fondamentale."],
+            a: 3,
+            e: "Le texte insiste sur la priorité donnée à la sécurité, tant pour les employés que pour les clients, ainsi que sur la mise en place de mesures préventives. Cela montre que la sécurité est une valeur fondamentale pour l'entreprise.[cite: 3]"
+        },
+        {
+            id: 84, p: p_madame,
+            q: "84. L'attribution d'un poste:",
+            o: ["garantit la poursuite de la carrière.", "se réalise selon un calendrier précis.", "engage la moralité du candidat.", "nécessite la remise d'un justificatif."],
+            a: 3,
+            e: "Le texte précise que la décision d'admission dépend de l'envoi d'un justificatif (l'attestation de réussite). Cela montre que la remise d'un document est nécessaire avant l'attribution du poste.[cite: 3]"
+        },
+        {
+            id: 85, p: p_madame,
+            q: "85. Ce courrier:",
+            o: ["demande des précisions sur les coordonnées.", "décrit l'état d'avancement d'une candidature.", "informe de l'attribution d'un poste.", "annonce le transfert du dossier à un autre service."],
+            a: 1,
+            e: "Le courrier informe que le dossier répond aux conditions d'admission, mais que la candidature n'est pas encore finalisée car une attestation est attendue. Il décrit donc l'état d'avancement d'une candidature.[cite: 3]"
+        },
+        {
+            id: 86, p: p_collegues,
+            q: "86. La personne propose...",
+            o: ["une validation de l'outil en réunion d'équipe.", "une collaboration autour des usages de l'outil.", "une formation intensive pour les enseignants.", "un retour aux médias éducatifs habituels."],
+            a: 1,
+            e: "Le message insiste sur la nécessité de mettre en commun les efforts pour explorer les possibilités d'utilisation de la plateforme, ce qui correspond à une collaboration autour de ses usages.[cite: 3]"
+        },
+        {
+            id: 87, p: p_collegues,
+            q: "87. La personne regrette...",
+            o: ["l'absence de création de nouveaux médias.", "le manque d'intérêt du personnel enseignant.", "le peu d'information consacré au nouvel outil.", "le soutien insuffisant de la direction."],
+            a: 2,
+            e: "Le message souligne un besoin d'explications plus détaillées sur la plateforme d'apprentissage, qui n'a pas été présenté lors des derniers échanges (donc très peu d'information consacrée à l'outil).[cite: 3]"
+        },
+        {
+            id: 88, p: "TABLEAU DE PRÉVISIONS DE LA POPULATION MONDIALE - ÉVOLUTION DES SCÉNARIOS\n\n« La population mondiale verra son nombre décroître régulièrement sur la deuxième moitié du siècle... »[cite: 3]",
+            q: "88. Quel graphique correspond au commentaire suivant ?",
+            o: ["Graphique 1", "Graphique 2", "Graphique 3", "Graphique 4"],
+            a: 0,
+            e: "Le commentaire dit que la population mondiale diminue régulièrement sur la deuxième moitié du siècle. Seul le Graphique 1 montre cette baisse après un pic, donc c'est celui qui correspond au texte.[cite: 3]"
+        },
+        {
+            id: 89, p: "Offre 1: Vous cherchez un logement luxueux et moderne pour vos vacances à New York? [...] technologie intelligente [...]\n\nOffre 2: Le camping de Brétignolles-sur-Mer vous emmène dans un endroit familial truffé d'activités [...]\n\nOffre 3: Envie d'évasion et d'aventures...? Rejoignez le Club Maldives [...] maison sur pilotis aux services cinq étoiles [...]\n\nOffre 4: À l'Hôtel Baobab, le choix de ne pas proposer le Wi-Fi serait une façon de vous rappeler que vous vous prélassez au beau milieu de la nature [...]. Un Eden à la végétation luxuriante, à l'architecture ancestrale, où chaque détail a été pensé pour minimiser l'impact sur l'environnement.[cite: 3]",
+            q: "89. Quelle offre permet de passer un séjour éco-responsable?",
+            o: ["Offre 1", "Offre 2", "Offre 3", "Offre 4"],
+            a: 3,
+            e: "Offre 4 met l'accent sur la nature, la déconnexion volontaire (sans Wi-Fi) et une architecture pensée pour minimiser l'impact environnemental, ce qui correspond parfaitement à un séjour éco-responsable.[cite: 3]"
+        },
+        {
+            id: 90, p: "Séjour 1: Troglodyte, rien que le terme est déjà un voyage. Habiter une maison creusée dans la roche est devenu un mode de vie insolite [...]\n\nSéjour 2: Confiné dans une bulle, vous devenez l'incarnation de l'expression \"être dans sa bulle\". Expérience idéale pour les loups solitaires [...]\n\nSéjour 3: Les chasseurs d'hôtels insolites vont se réjouir de cette nouvelle façon de vivre. Plongé dans le quotidien des Bourbons, le château de Fontainebleau ouvre grand ses portes. Les amoureux des forteresses seront les bienvenus pour y découvrir des façons de vivre ancestrales, des coutumes traditionnelles et des costumes d'époque [...]\n\nSéjour 4: Amateurs de sport d'hiver et aventuriers qui n'ont pas froid aux yeux [...] Dormir dans un igloo est devenu LA tendance écologique du moment [...][cite: 3]",
+            q: "90. Quelle offre de séjour correspond le mieux aux passionnés d'Histoire?",
+            o: ["Séjour 1", "Séjour 2", "Séjour 3", "Séjour 4"],
+            a: 2,
+            e: "Le Séjour 3 dans le château de Fontainebleau est clairement destiné aux passionnés d'Histoire. Il permet de découvrir des coutumes traditionnelles, des costumes d'époque et l'histoire des Bourbons.[cite: 3]"
+        },
+        {
+            id: 91, p: "Offre 1: Formez vos collaborateurs aux gestes qui sauvent [...] Formation d'une demi-journée avec 10 participants maximum par groupe [...]\n\nOffre 2: Nous proposons une formation qui permet à vos équipes d'enrichir leur expression écrite et d'améliorer leur orthographe [...] Tarif réduit pour les groupes. Contactez-nous pour un devis.\n\nOffre 3: Comment renforcer l'esprit d'équipe ? Notre programme de deux jours est conçu pour aider à améliorer les situations de travail en équipe [...] Nombre de participants: minimum 3, maximum 8.\n\nOffre 4: Ateliers de relaxation en entreprise [...] Ateliers en petits groupes jusqu'à 6 personnes.[cite: 3]",
+            q: "91. Quelle formation peut être suivie de manière individuelle?",
+            o: ["Offre 1", "Offre 2", "Offre 3", "Offre 4"],
+            a: 1,
+            e: "Offre 2 ne fixe pas de nombre minimum de participants et mentionne une formation personnalisable avec tarif réduit pour les groupes, ce qui implique qu'elle peut également être suivie individuellement.[cite: 3]"
+        },
+        {
+            id: 92, p: "Offre 1: ADILEB recrute un(e) gestionnaire de clientèle. Vos missions consisteront à créer des offres commerciales [...]\n\nOffre 2: Pour compléter notre équipe de conseillers financiers, nous vous proposons un poste d'expert-comptable [...]\n\nOffre 3: L'Alliance française de Vancouver recrute des professeurs ayant de l'expérience dans l'enseignement [...]\n\nOffre 4: Vous êtes connecté(e), intéressé(e) par le monde digital ? RTNC recherche un(e) journaliste spécialisé(e) dans l'étude des nouvelles technologies pour animer sa chronique quotidienne.[cite: 3]",
+            q: "92. Quelle offre s'adresse à des personnes travaillant dans les médias ?",
+            o: ["Offre 1", "Offre 2", "Offre 3", "Offre 4"],
+            a: 3,
+            e: "Offre 4 est la seule qui mentionne un poste de journaliste chargé d'animer une chronique, ce qui relève du secteur des médias.[cite: 3]"
+        },
+        {
+            id: 93, p: "Atelier de « street art »\nL'artiste Badria El Hassani a mené le projet « Peindre sa ville » avec les enfants d'Asilah. En décorant leur ville, ils apprennent à aimer le mobilier urbain. L'objectif est de valoriser le patrimoine et de (1) ______ des vocations pour un art engagé et percutant. L'artiste transmet de façon ludique son (2) ______ aux petits stagiaires.[cite: 3]",
+            q: "93. (1)",
+            o: ["susciter", "réclamer", "matérialiser", "satisfaire"],
+            a: 0,
+            e: "Le verbe susciter signifie « faire naître » ou « éveiller », ce qui convient parfaitement pour parler de vocations.[cite: 3]"
+        },
+        {
+            id: 94, p: "Atelier de « street art »\nL'artiste Badria El Hassani a mené le projet « Peindre sa ville » avec les enfants d'Asilah. En décorant leur ville, ils apprennent à aimer le mobilier urbain. L'objectif est de valoriser le patrimoine et de (1) ______ des vocations pour un art engagé et percutant. L'artiste transmet de façon ludique son (2) ______ aux petits stagiaires.[cite: 3]",
+            q: "94. (2)",
+            o: ["mode de vie", "tour de main", "état des lieux", "savoir-faire"],
+            a: 3,
+            e: "Pour le second blanc, savoir-faire correspond bien à ce qu'un artiste transmet dans un cadre pédagogique.[cite: 3]"
+        },
+        {
+            id: 95, p: "Des chercheurs auraient trouvé un antibiotique permettant de soigner la maladie de Lyme sans développer d'effets secondaires. Cette maladie (1) ______ par certaines tiques peut provoquer des symptômes cutanés ou articulaires très graves. En France, 50 000 personnes sont (2) ______ chaque année.[cite: 3]",
+            q: "95. (1)",
+            o: ["distribuée", "envoyée", "transmise", "diffusée"],
+            a: 2,
+            e: "Le mot transmise est correct pour parler d'une maladie que l'on peut contracter via un vecteur comme une tique.[cite: 3]"
+        },
+        {
+            id: 96, p: "Des chercheurs auraient trouvé un antibiotique permettant de soigner la maladie de Lyme sans développer d'effets secondaires. Cette maladie (1) ______ par certaines tiques peut provoquer des symptômes cutanés ou articulaires très graves. En France, 50 000 personnes sont (2) ______ chaque année.[cite: 3]",
+            q: "96. (2)",
+            o: ["marquées", "contaminées", "attaquées", "dérangées"],
+            a: 1,
+            e: "Pour le deuxième mot, contaminées est le plus approprié car il s'agit d'une infection médicale.[cite: 3]"
+        },
+        {
+            id: 97, p: "Phrase à compléter",
+            q: "97. Pour continuer à défendre l'environnement, votre ______ nous est indispensable:",
+            o: ["service", "sécurité", "support", "soutien"],
+            a: 3,
+            e: "Le mot soutien est approprié ici car il signifie appui ou aide nécessaire pour une cause. Les autres mots ne correspondent pas au sens de la phrase.[cite: 3]"
+        },
+        {
+            id: 98, p: "Phrase à compléter",
+            q: "98. Économisons l'eau! Prenons des mesures contre ______",
+            o: ["le déchet", "le gaspillage", "le rejet", "la pollution"],
+            a: 1,
+            e: "Dans le contexte de l'eau, il est important de lutter contre le gaspillage, c'est-à-dire l'utilisation excessive ou inutile des ressources.[cite: 3]"
+        },
+        {
+            id: 99, p: "Phrase à compléter",
+            q: "99. J'ai besoin de 20 euros. Tu pourrais me les ______ ?",
+            o: ["prêter", "offrir", "emprunter", "vendre"],
+            a: 0,
+            e: "Le verbe prêter est correct ici car il signifie donner temporairement de l'argent à quelqu'un. Emprunter signifie demander à recevoir.[cite: 3]"
+        },
+        {
+            id: 100, p: "Phrase à compléter",
+            q: "100. Je ______ des cours de piano deux fois par semaine depuis mes 8 ans.",
+            o: ["commence", "cherche", "trouve", "prends"],
+            a: 3,
+            e: "Le verbe prends est utilisé pour exprimer la fréquence d'une activité régulière comme suivre des cours (« prendre des cours »).[cite: 3]"
+        },
+        {
+            id: 101, p: "Phrase à compléter",
+            q: "101. L'entreprise doit ______ car tous les salariés sont tombés malades et ne peuvent pas travailler.",
+            o: ["fermer", "éteindre", "sortir", "quitter"],
+            a: 0,
+            e: "L'entreprise doit fermer parce que les salariés sont malades et ne peuvent pas travailler.[cite: 3]"
+        },
+        {
+            id: 102, p: "Phrase à compléter",
+            q: "102. Prévisions météo: il va ______ très chaud demain, 30°C annoncés !",
+            o: ["sentir", "être", "faire", "avoir"],
+            a: 2,
+            e: "Pour parler de la météo en français, on utilise généralement le verbe faire (il va faire chaud). Les autres verbes ne conviennent pas ici.[cite: 3]"
+        },
+        {
+            id: 103, p: "Service civique\n\nEn France, vous pouvez effectuer un service civique. Il s'agit d'un engagement volontaire de six à douze mois au service de l'intérêt général. D'une durée hebdomadaire de vingt-quatre heures minimum, il est indemnisé 580 € par mois.\nLe service civique est une expérience unique ouverte à tous les jeunes de 16 à 25 ans, et jusqu'à 30 ans en situation de handicap, sans condition de diplôme. Seule votre motivation compte !\nVous pouvez réaliser votre mission de service civique auprès d'une association, d'une collectivité territoriale, d'un établissement public, d'un bailleur de logement social ou des services de l'État.[cite: 3]",
+            q: "103. Le service civique permet aux jeunes:",
+            o: ["de bénéficier d'un emploi pendant 2 ans", "d'obtenir un diplôme à l'issue de leur engagement", "de participer au bon fonctionnement de la société", "de prouver leurs compétences à l'international"],
+            a: 2,
+            e: "Le texte insiste sur l'idée de s'engager au service de l'intérêt général, ce qui signifie contribuer à la société. Il ne parle pas d'un emploi à long terme, ni de diplôme. La bonne réponse est donc de participer au bon fonctionnement de la société.[cite: 3]"
+        },
+        {
+            id: 104, p: "La cuisinière et nouvellement auteure Loubna Tazi publie 365 recettes originales et solidaires. Pour cette restauratrice, qui œuvre socialement et localement pour le bien-manger, se nourrir est un acte politique. C'est dans cette optique qu'elle a monté la Cantine Vagabonde à Paris. Elle y propose une cuisine bio, végétarienne et de saison, soutenant les artisans producteurs d'aliments de qualité. Son livre offre des recettes tout en apportant des informations sur les aliments, les pratiques de consommation pour diminuer l'empreinte carbone, et autres conseils judicieux.\nD'après Le Chef[cite: 3]",
+            q: "104. D'après la cuisinière, bien se nourrir:",
+            o: ["est une préoccupation récente", "répond à une démarche écologique", "est réservé à une clientèle aisée", "demande beaucoup d'investissement"],
+            a: 1,
+            e: "Le texte met en avant une cuisine bio, locale, de saison, et un engagement envers des pratiques de consommation responsables... ce qui renvoie à une démarche écologique et engagée.[cite: 3]"
+        },
+        {
+            id: 105, p: "Viens passer une audition !\n\nL'Orchestre des jeunes de Laval est une compagnie artistique qui rassemble des musiciens de 12 à 24 ans.\nL'ensemble est dirigé par un chef d'orchestre expérimenté. Chaque année, ce groupe offre plusieurs concerts accompagné de l'Ensemble symphonique de Laval.\nÀ la recherche d'un orchestre jeune ? Avide de musique classique ? Nous t'attendons pour ta prochaine audition à nos côtés !\nViolon Alto Violoncelle Contrebasse Flûte Hautbois Clarinette.\nPour plus d'informations, contacte le 450 978 5666 ![cite: 3]",
+            q: "105. Ce document propose de:",
+            o: ["postuler pour intégrer un groupe", "assister à une série de concerts", "suivre une formation musicale", "devenir chef d'orchestre"],
+            a: 0,
+            e: "Ce document invite des jeunes musiciens à passer une audition pour rejoindre un orchestre. Il propose donc bien de postuler pour intégrer un groupe.[cite: 3]"
+        },
+        {
+            id: 106, p: "Bonjour,\n\nNous vous remercions de votre visite sur notre site. Votre commande n°AEG7654 a bien été enregistrée. La date de livraison est estimée au 31 mai.\nPour toute question, vous pouvez contacter notre service client, par courriel ou par téléphone.\n\nCordialement,[cite: 3]",
+            q: "106. Ce message a pour but:",
+            o: ["de proposer un rendez-vous", "d'informer d'une promotion", "de répondre à une invitation", "de confirmer un achat"],
+            a: 3,
+            e: "Le message confirme que la commande du client a été enregistrée et fournit une date de livraison. Il s'agit donc d'une confirmation d'achat.[cite: 3]"
+        },
+        {
+            id: 107, p: "Offre à durée limitée dans les rayons femme et enfant!\n\nRabais supplémentaire de 20% sur tous les pantalons et vestes avec le code Style.\nMagasinez dès maintenant sur www.lamode.com ou dans votre magasin ![cite: 3]",
+            q: "107. Ce document est:",
+            o: ["une offre d'emploi", "un menu de restaurant", "un courriel professionnel", "une annonce publicitaire"],
+            a: 3,
+            e: "Ce document promeut une réduction sur des articles vestimentaires, incitant à l'achat en ligne ou en magasin. Il s'agit donc clairement d'une annonce publicitaire.[cite: 3]"
+        },
+        {
+            id: 108, p: "Marcel DELAFOSSE,\n\nNous sommes heureux de vous confirmer votre présence au \"Salon des Entrepreneurs Nantes Grand-Ouest\" les 29 et 30 novembre 2022 à la Cité des Congrès de Nantes.\nDans l'attente de vous accueillir, nous restons à votre disposition par email pour tout renseignement complémentaire.\n\nCordialement,\nL'Équipe du Salon des Entrepreneurs[cite: 3]",
+            q: "108. Ce document concerne:",
+            o: ["la préparation d'une réunion en ligne", "la participation à un évènement professionnel", "l'annulation d'un rendez-vous d'affaires", "l'organisation d'un entretien d'embauche"],
+            a: 1,
+            e: "Ce document est une confirmation de participation à un salon professionnel. Il s'agit donc clairement de la participation à un évènement professionnel.[cite: 3]"
+        },
+        {
+            id: 109, p: p_ia,
+            q: "109. L'auteur dénonce:",
+            o: ["la pollution générée par les intelligences artificielles.", "l'usage immoral fait des intelligences artificielles.", "les contradictions dans les études sur les intelligences artificielles.", "la pensée unique sur les intelligences artificielles."],
+            a: 0,
+            e: "Le texte critique l'impact environnemental du numérique... Il alerte sur la pollution invisible et incontrôlée que pourraient engendrer ces systèmes, y compris l'IA.[cite: 3]"
+        },
+        {
+            id: 110, p: p_ia,
+            q: "110. Pour endiguer la crise écologique, il faut que:",
+            o: ["la mise en retrait de l'homme est indispensable.", "l'usage des nouvelles technologies est un leurre.", "les pratiques numériques sont à reconsidérer.", "l'intelligence artificielle est porteuse d'espoir."],
+            a: 2,
+            e: "Le texte critique la dépendance excessive aux technologies numériques pour résoudre la crise climatique... L'auteur souligne que se concentrer uniquement sur les comportements numériques des humains pourrait être vain, suggérant ainsi qu'une reconsidération des pratiques numériques est nécessaire.[cite: 3]"
+        },
+        {
+            id: 111, p: p_esprit,
+            q: "111. D'après le texte, l'être humain:",
+            o: ["doit trouver son harmonie spirituelle.", "se complait dans son anxiété.", "s'épanouit dans ses relations humaines.", "doit intérioriser ses tourments."],
+            a: 0,
+            e: "L'être humain doit trouver un équilibre en agissant avec empathie et vigilance, et en luttant contre ses représentations anxieuses. Ce processus implique de trouver une forme d'harmonie dans la gestion de son intranquillité.[cite: 3]"
+        },
+        {
+            id: 112, p: p_esprit,
+            q: "112. D'après le texte, la technologie:",
+            o: ["favorise la paix intérieure.", "représente un moyen de méditation.", "incarne une extension de l'Homme.", "symbolise un retour à la réalité."],
+            a: 2,
+            e: "Le texte mentionne que les \"arpenteurs de déserts\" restent connectés à l'actualité via Internet. Cela suggère que la technologie est perçue comme une extension de l'Homme, permettant une connexion au monde extérieur même dans l'isolement.[cite: 3]"
+        },
+        {
+            id: 113, p: p_meteorites,
+            q: "113. L'auteur de cet article s'inquiète:",
+            o: ["de l'avenir du ministère en charge de l'environnement.", "de la perte d'identité des populations du désert.", "des pollutions créées par les chasseurs de météorites.", "de la récupération du patrimoine par des groupes privés."],
+            a: 3,
+            e: "L'article met en lumière le risque que les spécimens de météorites marocaines se retrouvent dans des collections privées... L'auteur s'inquiète de cette récupération par des acteurs privés, comme la Meteorical Society.[cite: 3]"
+        },
+        {
+            id: 114, p: p_meteorites,
+            q: "114. D'après ce texte, la présence de météorites a généré:",
+            o: ["une nouvelle activité pour les populations du désert.", "une mobilisation sans précédent des universitaires.", "une exposition à destination du grand public.", "un trafic important avec les pays voisins."],
+            a: 0,
+            e: "Le texte explique que de nombreux nomades du désert ont fait de la chasse aux météorites leur métier, créant ainsi une nouvelle activité pour les populations locales.[cite: 3]"
+        },
+        {
+            id: 115, p: p_abeilles,
+            q: "115. D'après l'article, les abeilles:",
+            o: ["représentent un défi écologique pour les villes.", "apprécient la biodiversité des villes.", "se dirigent davantage vers les milieux urbains.", "produisent moins de miel dans les zones agricoles."],
+            a: 1,
+            e: "L'article met en évidence que les abeilles bénéficient de la diversité des espèces végétales présentes dans les villes. Les abeilles apprécient la biodiversité des villes qui leur offre une grande variété de sources alimentaires.[cite: 3]"
+        },
+        {
+            id: 116, p: p_abeilles,
+            q: "116. La mise en place des ruches en ville:",
+            o: ["présente des avantages limités dans le temps.", "est inefficace pour protéger l'écosystème.", "a un effet dévastateur sur les campagnes.", "permet à de nouvelles espèces végétales de prospérer."],
+            a: 0,
+            e: "L'article souligne que bien que les villes offrent des avantages initiaux pour les abeilles... ces avantages diminuent au fil du temps en raison de l'augmentation du nombre de ruches (saturation des ressources florales).[cite: 3]"
+        },
+        {
+            id: 117, p: p_zebu,
+            q: "117. Cette entreprise propose:",
+            o: ["de participer au développement durable de Madagascar.", "de contribuer à l'industrialisation des fermes à Madagascar.", "d'agir pour le repeuplement de zébus sur l'île.", "de vivre une expérience unique auprès d'agriculteurs malgaches."],
+            a: 0,
+            e: "Le texte met en avant un modèle de financement durable et solidaire pour aider les paysans de Madagascar tout en respectant l'agriculture biologique et l'élevage traditionnel. Cela correspond à l'idée de participer au développement durable de Madagascar.[cite: 3]"
+        },
+        {
+            id: 118, p: p_zebu,
+            q: "118. L'investisseur pourra :",
+            o: ["remplacer l'agriculteur sur certaines tâches à la ferme.", "posséder une parcelle de terre agraire à Madagascar.", "créer un lien unique avec le fermier et l'animal.", "acquérir un savoir-faire dans le domaine agricole."],
+            a: 2,
+            e: "Le texte mentionne spécifiquement que l'investisseur est en relation avec l'utilisateur des fonds placés, et il est encouragé à rendre visite au Zébu et au fermier, suggérant ainsi qu'il pourra créer un lien unique avec le fermier et l'animal.[cite: 3]"
+        },
+        {
+            id: 119, p: p_assurance,
+            q: "119. Ce document annonce:",
+            o: ["l'ouverture de bureaux annexes.", "une restructuration de l'entreprise.", "la revalorisation du taux des prestations.", "une hausse salariale selon l'ancienneté."],
+            a: 2,
+            e: "Le texte parle d'une augmentation des honoraires d'expertises et des forfaits liés aux déplacements extramuros, ce qui concerne directement la revalorisation des prestations fournies par l'entreprise.[cite: 3]"
+        },
+        {
+            id: 120, p: p_assurance,
+            q: "120. Cette décision:",
+            o: ["s'inscrit dans la redistribution des bénéfices.", "fait suite à une revendication du personnel.", "répond à une cohérence salariale de l'entreprise.", "souscrit à la nouvelle législation en vigueur."],
+            a: 2,
+            e: "Le texte évoque une augmentation progressive et régulière de la rémunération des agents... La décision semble plutôt s'inscrire dans une logique interne de l'entreprise, probablement pour répondre à une cohérence salariale, en garantissant des augmentations de manière organisée.[cite: 3]"
+        },
+        {
+            id: 121, p: p_beaux_arts,
+            q: "121. Ce document est:",
+            o: ["une invitation à un débat d'idées.", "une publicité pour une école.", "une présentation d'établissement.", "un compte rendu de réunion."],
+            a: 2,
+            e: "Le texte présente les Beaux-Arts de Paris, leur mission, leur organisation, et leur ambition. Il s'agit donc d'une présentation d'établissement, et non d'une publicité ou d'un débat.[cite: 3]"
+        },
+        {
+            id: 122, p: p_beaux_arts,
+            q: "122. Dans ce document, il est question de :",
+            o: ["un lieu de rencontre d'artistes.", "d'un lieu de formation.", "d'une salle d'exposition.", "d'un musée prestigieux."],
+            a: 1,
+            e: "Le texte décrit principalement les Beaux-Arts de Paris comme un lieu d'enseignement des arts plastiques, où les étudiants suivent leur formation pour devenir des artistes. Il est donc question d'un lieu de formation.[cite: 3]"
+        },
+        {
+            id: 123, p: "[Graphiques : Evolution du transport fluvial de marchandises]\n\n« Selon une étude publiée récemment, on enregistre à partir de 2022 un recul du transport fluvial. Celui-ci est très faible mais constant, malgré la croissance des dernières années. »[cite: 3]",
+            q: "123. Quel graphique correspond au commentaire suivant?",
+            o: ["Graphique 1", "Graphique 2", "Graphique 3", "Graphique 4"],
+            a: 0,
+            e: "Le graphique 1 montre une croissance régulière du transport fluvial de 2018 à 2021, puis un léger recul constant à partir de 2022. Cela correspond bien au commentaire.[cite: 3]"
+        },
+        {
+            id: 124, p: "Appel 1: L'émission de radio Vacarme RTS prépare un sujet sur le syndrome d'aliénation parentale...\n\nAppel 2: Le secteur de la puériculture connaît des difficultés importantes de recrutement... Racontez-nous les conséquences de ces difficultés sur votre foyer !\n\nAppel 3: Enfant de médecin, vous l'êtes devenu à votre tour...\n\nAppel 4: Babilou, Les Petits Chaperons Rouges... Les poids lourds du secteur très lucratif des crèches privées ne sont plus à présenter; mais comment la nouvelle logique de rentabilité induite par l'ouverture au marché affecte-t-elle votre quotidien? Que vos enfants soient accueillis en crèche privée, ou que vous évoluiez dans ce secteur, Mediacités vous donne la parole.[cite: 3]",
+            q: "124. À quel appel répondra un professionnel de la petite enfance souhaitant parler de sa pratique ?",
+            o: ["Appel 1", "Appel 2", "Appel 3", "Appel 4"],
+            a: 3,
+            e: "L'Appel 4 s'adresse aux personnes concernées par le secteur des crèches privées, que ce soit en tant que parent ou en tant que professionnel évoluant dans ce secteur. Un professionnel de la petite enfance y répondra.[cite: 3]"
+        },
+        {
+            id: 125, p: "Activité 1: Le GR 20 est réservé aux randonneurs confirmés. 200 km entre Calenzana et Conca...\n\nActivité 2: La via ferrata, ce sont des itinéraires rocheux sécurisés par un câble et des marches métalliques... réservée aux sportifs...\n\nActivité 3: Balisés en orange, les sentiers \"Mare a Mare\" permettent de traverser la Corse d'est en ouest, de \"mer à mer\". Ce sont des itinéraires courts, de moyenne montagne, offrant un panorama...\n\nActivité 4: La Corse compte près de 100 sites où le canyoning peut être pratiqué. Il s'agit de descendre un cours d'eau encaissé dans un canyon, à pied, à la nage, par des sauts en rappel...[cite: 3]",
+            q: "125. Quelle activité semble la moins difficile physiquement?",
+            o: ["Activité 1", "Activité 2", "Activité 3", "Activité 4"],
+            a: 2,
+            e: "L'Activité 3, les sentiers \"Mare a Mare\", sont décrits comme des itinéraires courts de moyenne montagne, sans mentionner de difficulté majeure. Les autres impliquent des défis physiques importants.[cite: 3]"
+        },
+        {
+            id: 126, p: "Film 1: John a quitté les services secrets et vit maintenant en Jamaïque... il faut sauver un scientifique qui vient d'être kidnappé. L'épreuve commence dans la jungle...\n\nFilm 2: Paul et Virginie viennent d'avoir un petit garçon... centre d'une forte lutte entre les grands-parents...\n\nFilm 3: Hatidze est une des dernières personnes à récolter le miel de manière traditionnelle, dans les montagnes désertiques...\n\nFilm 4: Léa, Marc, Karine et Francis sont deux couples d'amis de longue date... jalousie...[cite: 3]",
+            q: "126. Quel film propose de l'aventure?",
+            o: ["Film 1", "Film 2", "Film 3", "Film 4"],
+            a: 0,
+            e: "Le Film 1 décrit une histoire avec du suspense, de l'action et de l'aventure, où le protagoniste se lance dans une mission pour sauver un scientifique dans un cadre exotique (la jungle).[cite: 3]"
+        },
+        {
+            id: 127, p: "Donnez en confiance\n\nSOS SAHEL est labellisée Don en confiance depuis 1997.\nL'essentiel de vos dons, soit 93% des fonds (1) ______ est alloué à des actions concrètes de soutien aux activités des populations du Sahel.\nNous sommes reconnus d'(2) ______ publique depuis 1984 et nous soutenons les communautés rurales du Sahel depuis 45 ans.[cite: 3]",
+            q: "127. (1)",
+            o: ["remboursés", "ramassés", "regroupés", "collectés"],
+            a: 3,
+            e: "Collectés est le terme le plus approprié, car il fait référence à des fonds recueillis pour une cause.[cite: 3]"
+        }
+    ];
+
+    // --- APP LOGIC --- //
+    let currentMode = 'order'; 
+    let activeList = [];
+    let currentIndex = 0;
+    
+    // Scoring & Tracking
+    let score = 0;
+    let attempted = 0;
+    let mistakesSet = new Set();
+    let examUserAnswers = []; 
+
+    function setMode(mode) {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`mode-${mode}`).classList.add('active');
+        
+        currentMode = mode;
+        score = 0;
+        attempted = 0;
+        examUserAnswers = [];
+        
+        document.getElementById('quiz-ui').classList.remove('hidden');
+        document.getElementById('exam-ui').classList.add('hidden');
+        
+        if (mode === 'order') {
+            activeList = [...database];
+            currentIndex = 0;
+            document.getElementById('submit-exam-btn').classList.add('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        } else if (mode === 'random') {
+            activeList = [...database].sort(() => 0.5 - Math.random());
+            currentIndex = 0;
+            document.getElementById('submit-exam-btn').classList.add('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        } else if (mode === 'exam') {
+            // Full exam mode: random 25 questions as a realistic set
+            activeList = [...database].sort(() => 0.5 - Math.random()).slice(0, 25);
+            currentIndex = 0;
+            document.getElementById('submit-exam-btn').classList.remove('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        } else if (mode === 'review') {
+            activeList = [...mistakesSet].map(id => database.find(q => q.id === id)).filter(Boolean);
+            currentIndex = 0;
+            document.getElementById('submit-exam-btn').classList.add('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+            if(activeList.length === 0) {
+                alert("Vous n'avez aucune erreur enregistrée ! Bravo.");
+                setMode('order');
+                return;
+            }
+        }
+        
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if(currentIndex < 0) currentIndex = 0;
+        if(currentIndex >= activeList.length) currentIndex = activeList.length - 1;
+        if(activeList.length === 0) return;
+
+        const q = activeList[currentIndex];
+        
+        // Update stats
+        document.getElementById('q-progress').innerText = `Question ${currentIndex + 1} / ${activeList.length}`;
+        let accuracy = attempted > 0 ? Math.round((score / attempted) * 100) : 0;
+        document.getElementById('score-tracker').innerText = currentMode === 'exam' 
+            ? "Mode Examen - Les réponses sont cachées" 
+            : `Score: ${score} | Exactitude: ${accuracy}%`;
+
+        document.getElementById('passage').innerText = q.p;
+        document.getElementById('question').innerText = q.q;
+        
+        const optionsBox = document.getElementById('options');
+        optionsBox.innerHTML = '';
+        
+        const letters = ['A.', 'B.', 'C.', 'D.'];
+        q.o.forEach((optText, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = `${letters[index]} ${optText}`;
+            
+            // Check if user already answered this in exam mode
+            if (currentMode === 'exam' && examUserAnswers[currentIndex] === index) {
+                btn.style.borderColor = "var(--accent)";
+                btn.style.backgroundColor = "#ebf5fb";
+            }
+            
+            btn.onclick = () => selectOption(index, btn);
+            optionsBox.appendChild(btn);
+        });
+
+        // Hide explanation by default
+        document.getElementById('explanation').style.display = 'none';
+        
+        // Disable Nav appropriately
+        document.getElementById('prev-btn').disabled = currentIndex === 0;
+        
+        if (currentMode === 'exam') {
+            document.getElementById('next-btn').disabled = currentIndex === activeList.length - 1;
+        } else {
+            document.getElementById('next-btn').disabled = currentIndex === activeList.length - 1;
+        }
+    }
+
+    function selectOption(selectedIndex, btnElement) {
+        const q = activeList[currentIndex];
+        const buttons = document.querySelectorAll('.option-btn');
+
+        if (currentMode === 'exam') {
+            examUserAnswers[currentIndex] = selectedIndex;
+            buttons.forEach(b => { b.style.borderColor = ""; b.style.backgroundColor = ""; });
+            btnElement.style.borderColor = "var(--accent)";
+            btnElement.style.backgroundColor = "#ebf5fb";
+            return; // Don't evaluate immediately in exam mode
+        }
+
+        // Standard Practice Modes
+        buttons.forEach(b => b.disabled = true);
+        attempted++;
+        
+        if (selectedIndex === q.a) {
+            btnElement.classList.add('correct');
+            score++;
+            showExplanation(true, q);
+        } else {
+            btnElement.classList.add('incorrect');
+            buttons[q.a].classList.add('correct');
+            mistakesSet.add(q.id);
+            showExplanation(false, q);
+        }
+        
+        let accuracy = Math.round((score / attempted) * 100);
+        document.getElementById('score-tracker').innerText = `Score: ${score} | Exactitude: ${accuracy}%`;
+    }
+
+    function showExplanation(isCorrect, qData) {
+        const expBox = document.getElementById('explanation');
+        const expTitle = document.getElementById('exp-title');
+        const expContent = document.getElementById('exp-content');
+        
+        expBox.style.display = 'block';
+        if (isCorrect) {
+            expTitle.innerHTML = '✅ Correct !';
+            expTitle.style.color = 'var(--success)';
+        } else {
+            expTitle.innerHTML = '❌ Incorrect';
+            expTitle.style.color = 'var(--error)';
+        }
+        
+        expContent.innerText = qData.e;
+    }
+
+    function navQuestion(direction) {
+        currentIndex += direction;
+        loadQuestion();
+    }
+
+    function submitExam() {
+        if (!confirm("Voulez-vous vraiment soumettre votre examen ?")) return;
+        
+        let examScore = 0;
+        let breakdownHTML = '';
+        
+        activeList.forEach((q, idx) => {
+            const uAns = examUserAnswers[idx];
+            if (uAns === q.a) {
+                examScore++;
+            } else {
+                mistakesSet.add(q.id);
+                const uAnsText = uAns !== undefined ? q.o[uAns] : "Non répondu";
+                breakdownHTML += `
+                    <div style="background:#fff; padding:15px; border-left:4px solid #e74c3c; margin-bottom:15px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                        <strong>Question ${idx + 1}:</strong> ${q.q}<br><br>
+                        <span style="color:#e74c3c">✗ Votre réponse: ${uAnsText}</span><br>
+                        <span style="color:#27ae60">✓ Bonne réponse: ${q.o[q.a]}</span><br>
+                        <p style="margin-top:10px; font-size:0.9em; background:#f9f9f9; padding:10px;"><em>Explication:</em> ${q.e}</p>
+                    </div>`;
+            }
+        });
+
+        document.getElementById('quiz-ui').classList.add('hidden');
+        document.getElementById('exam-ui').classList.remove('hidden');
+        
+        const pct = Math.round((examScore / activeList.length) * 100);
+        document.getElementById('final-score').innerText = `${examScore} / ${activeList.length} (${pct}%)`;
+        document.getElementById('final-stats').innerText = `Vous avez fait ${activeList.length - examScore} erreur(s).`;
+        document.getElementById('mistakes-breakdown').innerHTML = breakdownHTML;
+    }
+
+    // Initialize
+    window.onload = () => setMode('order');
+
+</script>
+
+</body>
+</html>
