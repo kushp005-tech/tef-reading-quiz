@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TEF Canada — Compréhension écrite</title>
+
+    <title>TEF Canada Reading Quiz</title>
 
     <style>
         * {
@@ -11,102 +12,154 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px;
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
             background: #f5f7fa;
-            color: #111;
+            color: #222;
         }
 
-        h1 {
+        .header {
+            background: #ffffff;
+            padding: 50px 20px 40px;
             text-align: center;
-            margin-bottom: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 38px;
+            color: #222;
         }
 
         .subtitle {
-            text-align: center;
+            margin-top: 12px;
+            font-size: 18px;
             color: #666;
-            margin-bottom: 35px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 26px;
+            margin-bottom: 25px;
         }
 
         .quiz {
             display: block;
             background: white;
-            padding: 25px;
-            margin: 18px 0;
-            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 20px;
+            border-radius: 14px;
             text-decoration: none;
-            color: #111;
-            border: 1px solid #ddd;
-            transition: 0.2s;
+            color: #222;
+            border: 1px solid #e1e5ea;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
         }
 
         .quiz:hover {
-            border-color: #333;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10);
+            border-color: #bbb;
         }
 
         .quiz h2 {
             margin: 0 0 8px;
+            font-size: 22px;
         }
 
         .quiz p {
             margin: 0;
             color: #666;
-        }
-
-        .section-title {
-            margin-top: 40px;
-            margin-bottom: 15px;
+            font-size: 16px;
         }
 
         .footer {
             text-align: center;
-            margin-top: 45px;
             color: #888;
             font-size: 14px;
+            padding: 30px 20px 40px;
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                padding: 35px 15px 30px;
+            }
+
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .subtitle {
+                font-size: 16px;
+            }
+
+            .container {
+                margin-top: 30px;
+            }
+
+            .quiz {
+                padding: 22px;
+            }
+
+            .quiz h2 {
+                font-size: 20px;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <h1>TEF Canada — Compréhension écrite</h1>
+    <div class="header">
+        <h1>🇨🇦 TEF Canada – Reading Practice</h1>
 
-    <div class="subtitle">
-        Interactive TEF Reading Practice
+        <div class="subtitle">
+            Interactive TEF Reading Practice
+        </div>
     </div>
 
-    <h2 class="section-title">📚 Practice Questions</h2>
 
-    <!-- Questions 1–58 -->
-    <a class="quiz" href="tef-reading%201-58.html">
-        <h2>Questions 1–58</h2>
-        <p>Practice questions 1 to 58</p>
-    </a>
+    <div class="container">
 
-    <!-- Questions 59–127 -->
-    <a class="quiz" href="tef-reading%2059-127.html">
-        <h2>Questions 59–127</h2>
-        <p>Practice questions 59 to 127</p>
-    </a>
+        <h2 class="section-title">📚 Practice Questions</h2>
 
-    <!-- Questions 128–200 -->
-    <a class="quiz" href="tef-reading%20128-200.html">
-        <h2>Questions 128–200</h2>
-        <p>Practice questions 128 to 200</p>
-    </a>
-<a class="quiz" href="tef-reading%20128-200.html">
-    <h2>Questions 128–200</h2>
-    <p>Practice questions 128 to 200</p>
-</a>
 
-<a class="quiz" href="tef-reading%20201-275.html">
-    <h2>Questions 201–275</h2>
-    <p>Practice questions 201 to 275</p>
-</a>
+        <!-- Questions 1–58 -->
+        <a class="quiz" href="tef-reading%201-58.html">
+            <h2>Questions 1–58</h2>
+            <p>Practice questions 1 to 58</p>
+        </a>
+
+
+        <!-- Questions 59–127 -->
+        <a class="quiz" href="tef-reading%2059-127.html">
+            <h2>Questions 59–127</h2>
+            <p>Practice questions 59 to 127</p>
+        </a>
+
+
+        <!-- Questions 128–200 -->
+        <a class="quiz" href="tef-reading%20128-200.html">
+            <h2>Questions 128–200</h2>
+            <p>Practice questions 128 to 200</p>
+        </a>
+
+
+        <!-- Questions 201–275 -->
+        <a class="quiz" href="tef-reading%20201-275.html">
+            <h2>Questions 201–275</h2>
+            <p>Practice questions 201 to 275</p>
+        </a>
+
+    </div>
+
+
     <div class="footer">
         TEF Canada Reading Practice
     </div>
