@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>TEF Canada - Compréhension Écrite (Q200-Q275)</title>
+    <style>
+        :root {
+            --bg: #f9f9fb;
+            --text: #2c3e50;
+            --primary: #3498db;
+            --correct: #27ae60;
+            --incorrect: #e74c3c;
+            --panel-bg: #ffffff;
+            --border: #e0e0e0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #app {
+            width: 100%;
+            max-width: 900px;
+            margin: 20px;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav-buttons button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-buttons button:hover {
+            opacity: 0.9;
+        }
+        .stats {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .passage-box {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            font-size: 18px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .question-box {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .option-btn {
+            background-color: var(--panel-bg);
+            border: 2px solid var(--border);
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            background-color: #f1f8ff;
+        }
+        .option-btn:disabled {
+            cursor: not-allowed;
+            color: #555;
+        }
+        .correct {
+            border-color: var(--correct) !important;
+            background-color: #eafaf1 !important;
+            color: #1d8348 !important;
+            font-weight: bold;
+        }
+        .incorrect {
+            border-color: var(--incorrect) !important;
+            background-color: #fdedec !important;
+            color: #922b21 !important;
+        }
+        .explanation-box {
+            display: none;
+            background-color: #fdfefe;
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            line-height: 1.5;
+        }
+        .explanation-box h4 {
+            margin-top: 0;
+        }
+        .vocab-list {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+        .footer-nav {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        .footer-nav button {
+            background-color: var(--text);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="header">
+        <div class="nav-buttons">
+            <button onclick="startMode('order')">Practice in Order</button>
+            <button onclick="startMode('random')">Random Question</button>
+            <button onclick="startMode('exam')">Full Exam Mode</button>
+            <button onclick="startMode('review')">Review My Mistakes</button>
+        </div>
+        <div class="stats" id="stats-display">
+            Score: 0 / 0 | Accuracy: 0%
+        </div>
+    </div>
+
+    <div id="quiz-container">
+        <div class="passage-box" id="passage-text"></div>
+        <div class="question-box" id="question-text"></div>
+        <div class="options" id="options-container"></div>
+        
+        <div class="explanation-box" id="explanation-container">
+            <h4 id="verdict-title"></h4>
+            <div id="explanation-text"></div>
+            <h4>Vocabulaire utile:</h4>
+            <ul class="vocab-list" id="vocab-list"></ul>
+        </div>
+
+        <div class="footer-nav">
+            <button id="prev-btn" class="hidden" onclick="prevQuestion()">[Previous]</button>
+            <span id="question-counter" style="align-self: center; font-weight: bold;"></span>
+            <button id="next-btn" class="hidden" onclick="nextQuestion()">[Next]</button>
+        </div>
+    </div>
+    
+    <div id="exam-summary" class="hidden passage-box">
+        <h2>Exam Completed</h2>
+        <p id="exam-results"></p>
+        <button onclick="startMode('review')" style="padding:10px; background:var(--primary); color:white; border:none; border-radius:5px; cursor:pointer;">Review Mistakes</button>
+    </div>
+</div>
+
+<script>
+    // BASE DE DONNÉES : QUESTIONS 200 à 275 UNIQUEMENT
+    const questions = [
+        {
+            id: 200,
+            passage: "Offre 1\nVotre soeur part tous les week-ends en montagne ? Votre cousin passe ses vacances sous une tente? Ce coffret du randonneur est fait pour eux ! Ils y trouveront des objets qui facilitent la vie quand on est dans la nature ainsi qu'un petit guide (humoristique) de survie.\nOffre 2\nCe coffret contient tout ce dont les amateurs de thé ont besoin: deux tasses, une boule à thé et une cuillère à doser. Vous y trouverez également un set de 20 sachets à remplir et un mini-guide des thés, indispensable pour les passionnés de cette boisson et de ses bienfaits.\nOffre 3\n“Ma première bibliothèque”, ce sont des coffrets adaptés aux adolescents pour les initier aux plaisirs de la lecture, qui incluent plusieurs romans actuels de différentes thématiques, une mini-lampe de lecture, un marque-page et un sachet de bonbons et sucreries à grignoter.\nOffre 4\nLe coffret cadeau idéal pour les chefs en herbe: il contient tous les ustensiles nécessaires pour commencer à cuisiner, un livre de 40 recettes accompagnées de conseils et un livret sur les épices (curry, curcuma...) pour apprendre à les utiliser. Tout pour réussir ses premiers pas en cuisine!",
+            question: "200. Quel coffret cadeau inclut de la nourriture ?",
+            options: ["A. Offre 1", "B. Offre 2", "C. Offre 3", "D. Offre 4"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'Offre 3 indique explicitement qu'elle contient un « sachet de bonbons et sucreries à grignoter ». Les bonbons et sucreries sont des produits alimentaires (nourriture).",
+            vocabulary: ["sucreries à grignoter → sweets to snack on"]
+        },
+        {
+            id: 201,
+            passage: "Nous lançons un appel pour agir face au manque de formation professionnelle chez les jeunes enseignants! Nous invitons les syndicats, les professeurs et futurs professeurs mais aussi ceux ayant déjà pris leur retraite à s'unir autour d’une réflexion sur la place de l’enseignement dans la société.\n\nFace à l'inaction du gouvernement, à nous de mettre en place des stratégies solidaires pour faire pression et obtenir gain de cause. Nos jeunes professeurs sont démunis face aux difficultés rencontrées sur le terrain et beaucoup abandonnent leur poste trop tôt dans leur carrière.\n\nRendez-vous la semaine prochaine pour notre première réunion!",
+            question: "201. Les auteurs de ce document :",
+            options: ["A. exigent de nouveaux recrutements", "B. expriment des revendications", "C. veulent défendre leur retraite", "D. luttent contre la baisse des salaires"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte lance un appel pour « agir face au manque de formation » et « faire pression et obtenir gain de cause ». Ces expressions formulent clairement des revendications syndicales et professionnelles.",
+            vocabulary: ["revendications → demands / claims", "obtenir gain de cause → to win one's case"]
+        },
+        {
+            id: 202,
+            passage: "Nous lançons un appel pour agir face au manque de formation professionnelle chez les jeunes enseignants! Nous invitons les syndicats, les professeurs et futurs professeurs mais aussi ceux ayant déjà pris leur retraite à s'unir autour d'une réflexion sur la place de l’enseignement dans la société.\n\nFace à l'inaction du gouvernement, à nous de mettre en place des stratégies solidaires pour faire pression et obtenir gain de cause. Nos jeunes professeurs sont démunis face aux difficultés rencontrées sur le terrain et beaucoup abandonnent leur poste trop tôt dans leur carrière.\n\nRendez-vous la semaine prochaine pour notre première réunion!",
+            question: "202. Les auteurs de ce document croient en l'efficacité :",
+            options: ["A. des poursuites judiciaires", "B. des négociations financières", "C. des actions collectives", "D. des manifestations publiques"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'appel invite un large groupe (syndicats, professeurs, futurs professeurs, retraités) à « s'unir » et à mettre en place des « stratégies solidaires ». Cela démontre une croyance forte en la force des actions collectives.",
+            vocabulary: ["s'unir → to unite", "stratégies solidaires → collective / solidarity strategies"]
+        },
+        {
+            id: 203,
+            passage: "L'intelligence artificielle: un danger pour nos emplois ?\n\nL'intelligence artificielle serait en train de remplacer les humains qui n'auraient plus qu'à plier bagage. Telle est l'affirmation que l'on rencontre de plus en plus couramment dans les médias.\n\nSi derrière les machines on trouvait finalement des humains dont le travail a été une fois encore et sans doute plus encore que d'habitude invisibilisé ? Si c'était plutôt les humains qui remplacaient les robots? Antonio Cassili rend visible, dans cette thèse, la production de données et le rôle joué par les plateformes numériques dans l'organisation de l’activité humaine.\n\nL'externalisation du travail et sa fragmentation, permises par l'automatisation, n'entraînent pas selon lui le grand remplacement des humains par des machines, mais un déplacement du travail vers ceux qu'ils nomment les « tâcherons du clic » — les travailleurs à la tâche... Dans cette division internationale du travail, le travail humain n'est pas remplacé par des IA mais par d'autres travailleurs occultés, invisibilisés, et sous-payés.",
+            question: "203. Evoquant l'intelligence artificielle, le journaliste souligne :",
+            options: ["A. l'ingéniosité qu'on lui prête", "B. le remplacement qui menace les humains", "C. les inégalités salariales qu'elle entraîne", "D. les faces sombres qu'on lui méconnait"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte insiste sur le fait que l'IA repose sur des humains « invisibilisés, et sous-payés » (des tâcherons). Il met en lumière une disparité et une exploitation financière, soulignant ainsi les inégalités salariales liées à cette technologie.",
+            vocabulary: ["plier bagage → to pack up and leave", "tâcherons → drudges / pieceworkers"]
+        },
+        {
+            id: 204,
+            passage: "L'externalisation du travail et sa fragmentation, permises par l'automatisation, n'entraînent pas selon lui le grand remplacement des humains par des machines, mais un déplacement du travail vers ceux qu'ils nomment les « tâcherons du clic » — les travailleurs à la tâche. Pour produire des mégadonnées qui constituent la source de valeur des grandes sociétés du numérique, il existe en effet un processus de « tâcheronnisation » du travail...",
+            question: "204. La «tâcheronnisation» est un processus :",
+            options: ["A. de remplacement robotique complet", "B. de valorisation des compétences informatiques", "C. de fragmentation du travail en micro-tâches sous-payées", "D. de syndicalisation des travailleurs du clic"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLa tâcheronnisation (issue de \"tâcheron\") décrit l'externalisation et la fragmentation de l'activité humaine en micro-tâches répétitives et mal rémunérées pour entraîner les IA.",
+            vocabulary: ["mégadonnées → big data", "fragmentation → breaking up into smaller pieces"]
+        },
+        {
+            id: 205,
+            passage: "Un jeu vidéo créé par une [1] de Vancouver s'inspire d'une série télévisée canadienne. Il est rapidement devenu le jeu le plus téléchargé ! Les joueurs découvrent l'univers d’une usine de fabrication de papier, communiquent avec les [2] originaux et revivent certains moments de la série.",
+            question: "205. (1)",
+            options: ["A. recherche", "B. entreprise", "C. formation", "D. publicité"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nUn jeu vidéo est produit et commercialisé par un studio de développement, qui est une « entreprise ». Les autres options ne peuvent pas, par définition, créer un jeu complet.",
+            vocabulary: ["entreprise → company / business"]
+        },
+        {
+            id: 206,
+            passage: "Un jeu vidéo créé par une [1] de Vancouver s'inspire d'une série télévisée canadienne. Il est rapidement devenu le jeu le plus téléchargé ! Les joueurs découvrent l'univers d'une usine de fabrication de papier, communiquent avec les [2] originaux et revivent certains moments de la série.",
+            question: "206. (2)",
+            options: ["A. objets", "B. décors", "C. acteurs", "D. projets"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte précise que les joueurs « communiquent » (échangent, parlent). On ne peut communiquer qu'avec des personnes, en l'occurrence ici les « acteurs » qui ont joué dans la série originale.",
+            vocabulary: ["acteurs originaux → original actors/cast"]
+        },
+        {
+            id: 207,
+            passage: "Livre 1\nCe ne sont ni les écrasantes sécheresses ni les pluies extrêmes qui la marquent le plus... Après l'emprisonnement injuste de son père...\n\nLivre 2\nVoila une histoire aussi poétique qu’hilarante qui nous emmène dans un lieu pour le moins atypique: un cimetière situé au fin fond de la Bourgogne...\n\nLivre 3\nLa terrible tempête de neige qui s'abat sur l'Islande aurait dû décourager les plus courageux de s'aventurer à l'extérieur. Ils l'ont pourtant fait. Ce couple n'aurait jamais dû laisser entrer chez eux un inconnu. Un invité indésirable. Un mensonge horrible. Et l'inspectrice Hulda continuera d'être hantée par ces fantômes...\n\nLivre 4\nMaélle, directrice financiére, n’a tout simplement pas le temps pour les réves. Mais quand sa meilleure amie, Romane, lui demande un service...",
+            question: "207. Quel livre conseiller à une personne qui aime les romans policiers ?",
+            options: ["A. Livre 1", "B. Livre 2", "C. Livre 3", "D. Livre 4"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe Livre 3 utilise tout le champ lexical du roman policier / thriller : « inconnu », « invité indésirable », « mensonge horrible », et surtout la mention d'une « inspectrice » menant une enquête.",
+            vocabulary: ["roman policier → detective novel / thriller", "inspectrice → female inspector / detective"]
+        },
+        {
+            id: 208,
+            passage: "Graphique 1 | Graphique 2 | Graphique 3 | Graphique 4\n(Analyse visuelle de l'évolution des tranches d'âge en Afrique du Nord)\n\nCommentaire : « Dans les décennies à venir, les 15-24 ans d'Afrique du Nord verront leurs rangs grossir de manière continue. »",
+            question: "208. Quel graphique correspond au commentaire suivant ?",
+            options: ["A. Graphique 1", "B. Graphique 2", "C. Graphique 3", "D. Graphique 4"],
+            correctIndex: 3,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe commentaire évoque une augmentation (« grossir ») ininterrompue (« de manière continue ») dans le futur (« dans les décennies à venir »). La courbe du Graphique 4 illustre cette croissance démographique constante.",
+            vocabulary: ["grossir de manière continue → to grow continuously", "rangs → ranks / numbers"]
+        },
+        {
+            id: 209,
+            passage: "La fin du charbon?\nLe constat est alarmant. Malgré la diminution des financements accordés au secteur du charbon, fruit des politiques de désinvestissements des banques, à peine 5% des entreprises du secteur ont prévu de cesser leurs activités, selon le rapport des ONG.\n\nLa moitié d’entre elles comptent même toujours développer de nouvelles centrales électriques au charbon, de nouvelles mines de charbon ou de nouvelles infrastructures de transport de charbon.\n\nDe nombreuses institutions financières justifient le maintien de leur soutien à l'industrie du charbon en affirmant qu'elles veulent aider leurs clients à effectuer la transition. Mais les études montrent que la grande majorité des entreprises ne cherchent pas de solutions alternatives.",
+            question: "209. Les entreprises du charbon :",
+            options: ["A. cherchent à adopter un modèle plus écologique", "B. ont l'obligation d'arrêter leurs activités", "C. tirent profit de la revente d'usines", "D. conservent l'appui des organismes financiers"],
+            correctIndex: 3,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte affirme que « De nombreuses institutions financières justifient le maintien de leur soutien à l'industrie du charbon ». Cela prouve que ces entreprises continuent de bénéficier de l'appui (soutien) des banques (organismes financiers).",
+            vocabulary: ["maintien de leur soutien → maintaining their support", "désinvestissements → divestments"]
+        },
+        {
+            id: 210,
+            passage: "Pour les ONG, les acteurs financiers ne doivent pas se contenter des dates de sortie des entreprises du charbon. Il faut réclamer un plan détaillé d'abandon et exiger que les infrastructures soient démantelées et non revendues à d'autres acteurs.\n\nPour aider les institutions financières dans leur reconversion, les ONG ont publié un guide d’une dizaine de critères allant du refus du financement de nouveaux projets fossiles à la fin du lobbying dans le secteur en passant par des plans de fermeture centrale par centrale.",
+            question: "210. Les ONG demandent :",
+            options: ["A. un développement des centrales électriques", "B. des aides financières pour sortir du charbon", "C. un soutien de la classe politique", "D. une stratégie pour abandonner le charbon"],
+            correctIndex: 3,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte précise explicitement qu'il « faut réclamer un plan détaillé d'abandon et exiger que les infrastructures soient démantelées ». Un « plan détaillé d'abandon » correspond à une stratégie de sortie.",
+            vocabulary: ["démantelées → dismantled", "abandon → abandonment / phase-out"]
+        },
+        {
+            id: 212,
+            passage: "Préparez et apportez vos ______, cela vous évitera d'acheter dans les distributeurs automatiques.",
+            question: "212. Complétez la phrase :",
+            options: ["A. affaires", "B. papiers", "C. repas", "D. cadeaux"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe contexte indique qu’apporter quelque chose permet d'éviter d'acheter de la nourriture dans des distributeurs (vending machines). « Repas » (meals) est le mot parfaitement approprié.",
+            vocabulary: ["distributeurs automatiques → vending machines"]
+        },
+        {
+            id: 213,
+            passage: "Le service des transports annonce un mouvement de grève, des ______ d'horaires sont à prévoir.",
+            question: "213. Complétez la phrase :",
+            options: ["A. échanges", "B. multiplications", "C. changements", "D. diminutions"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nUn mouvement de grève (strike) entraîne des perturbations et des modifications du trafic. On prévoit donc des « changements » d'horaires.",
+            vocabulary: ["mouvement de grève → strike action", "à prévoir → to be expected"]
+        },
+        {
+            id: 214,
+            passage: "Je trouve que, dans ce film, ______ de l'actrice est extraordinaire.",
+            question: "214. Complétez la phrase :",
+            options: ["A. l'interprétation", "B. l'incarnation", "C. la réalisation", "D. la comédie"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nEn cinéma et au théâtre, le jeu d'un acteur ou la manière dont il s'approprie un rôle s'appelle « l'interprétation ».",
+            vocabulary: ["l'interprétation → the performance / acting"]
+        },
+        {
+            id: 215,
+            passage: "Bonjour,\nVotre carte d'assurance maladie n'a pas été mise à jour depuis plus d'un an. Sachez qu'il est indispensable d'effectuer cette démarche afin d'éviter tout problème de remboursement.\n\nCette action vous donne l'assurance d'un remboursement rapide et fiable.\n\nPour mettre à jour votre carte, rendez-vous\n— en pharmacie\n— sur les bornes multiservices situées dans nos espaces d'accueil\n— dans certains établissements hospitaliers et cliniques\n\nPour rappel, votre compte personnel vous permet d'effectuer vos démarches en ligne en toute simplicité :\n— télécharger votre attestation de droits\n— commander votre carte\n— signaler la perte ou le vol de votre carte\n\nAvec toute mon attention,\nVotre correspondant de l'Assurance Maladie",
+            question: "215. Suite à ce courriel, l'usager doit :",
+            options: ["A. commander une nouvelle carte", "B. fournir des justificatifs pour un remboursement", "C. actualiser sa carte dans un espace dédié", "D. activer sans tarder son espace personnel"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe message principal du courriel indique explicitement : « Pour mettre à jour [actualiser] votre carte, rendez-vous en pharmacie, sur les bornes multiservices... ».",
+            vocabulary: ["mise à jour → updated", "bornes multiservices → self-service kiosks"]
+        },
+        {
+            id: 216,
+            passage: "Bonjour,\nVotre carte d'assurance maladie n'a pas été mise à jour depuis plus d'un an... Pour mettre à jour votre carte, rendez-vous\n— en pharmacie\n— sur les bornes multiservices situées dans nos espaces d'accueil\n— dans certains établissements hospitaliers et cliniques",
+            question: "216. L’usager devra:",
+            options: ["A. détruire son ancienne carte", "B. établir un certificat d'assurance", "C. effectuer physiquement une démarche", "D. contacter l'auteur du courrier"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe courriel précise que pour mettre la carte à jour, il faut se rendre « en pharmacie », « sur les bornes » ou dans des « établissements ». L'usager doit donc se déplacer physiquement pour accomplir cette démarche.",
+            vocabulary: ["effectuer une démarche → to carry out a procedure"]
+        },
+        {
+            id: 217,
+            passage: "Groupe ECO MEDIAS\nRecherche CORRESPONDANT REGIONAL (H/F)\nPROFIL :\nDiplôme universitaire (Economie/Droit). Vous justifiez d’une première expérience média réussie. La persévérance et la rigueur sont vos points forts. Vous êtes doté(e) d’un très fort esprit d'initiative et êtes à l'aise avec le travail d'équipe.\n\nMISSIONS :\nVous serez en charge de la couverture du traitement de l'information dans tout le pays pour nos rédactions régionales.\nNous vous offrons, outre une rémunération attractive et une formation performante, la possibilité de vous investir et d'évoluer au sein d'un groupe leader en pleine expansion.",
+            question: "217. Pour postuler, il est nécessaire :",
+            options: ["A. avoir fait un stage dans le groupe", "B. de vouloir exercer à l'international", "C. de sortir d'une école de journalisme", "D. d'avoir déjà travaillé dans le domaine"],
+            correctIndex: 3,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nDans la section Profil, il est exigé : « Vous justifiez d'une première expérience média réussie ». Cela signifie qu'il faut obligatoirement avoir déjà travaillé dans le domaine des médias pour postuler.",
+            vocabulary: ["justifier d'une première expérience → to demonstrate prior experience"]
+        },
+        {
+            id: 218,
+            passage: "Groupe ECO MEDIAS\nRecherche CORRESPONDANT REGIONAL (H/F)\nPROFIL :\nDiplôme universitaire (Economie/Droit). Vous justifiez d'une première expérience média réussie... \n\nMISSIONS :\nVous serez en charge de la couverture du traitement de l'information dans tout le pays pour nos rédactions régionales.\nNous vous offrons, outre une rémunération attractive et une formation performante, la possibilité de vous investir et d'évoluer au sein d’un groupe leader en pleine expansion.",
+            question: "218. Cette offre propose :",
+            options: ["A. un équipement moderne", "B. des déplacements à l'international", "C. un contrat à durée illimitée", "D. un salaire intéressant"],
+            correctIndex: 3,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'entreprise offre explicitement une « rémunération attractive ». Une rémunération attractive est un synonyme direct d'un salaire intéressant.",
+            vocabulary: ["rémunération attractive → attractive salary / compensation"]
+        },
+        {
+            id: 219,
+            passage: "Offre 1\nDepuis 62 ans déjà, une fois l'été venu, les mélomanes se retrouvent... concerts de musique de chambre...\nOffre 2\nDu parvis de la basilique... programmation intelligente et éclectique (du baroque à nos jours)...\nOffre 3\nTrès belle programmation autour du piano et de la musique de chambre pour cette 72ème édition du festival. Signalons la participation d'un monstre sacré de l'interprétation baroque ainsi que de la troupe du chorégraphe principal de l'opéra de Lyon, en compagnie de l'orchestre symphonique...\nOffre 4\nUn des événements majeurs... classiques et jazz. le public écoutera au casque...",
+            question: "219. Au cours de quel festival peut-on assister à un spectacle de danse ?",
+            options: ["A. Offre 1", "B. Offre 2", "C. Offre 3", "D. Offre 4"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'Offre 3 mentionne la participation de la « troupe du chorégraphe principal de l'opéra de Lyon ». Un chorégraphe dirige des danseurs. Il y a donc un spectacle de danse au programme.",
+            vocabulary: ["chorégraphe → choreographer"]
+        },
+        {
+            id: 220,
+            passage: "<< Je m'appelle Hiba et, grâce à mon parrain, je peux aller à l'école. >>\n\nFaites un don de 100 dirhams par mois à SOS villages d'enfants pour aider des enfants sans famille à vivre mieux, aller à l'école, vivre dans une maison avec leurs frères et sœurs.\n\nContactez SOS Villages d'enfants au 0522777285. Association placée sous la présidence du Roi du Maroc.",
+            question: "220. Ce document invite à :",
+            options: ["A. donner des cours d'économie", "B. distribuer du matériel scolaire", "C. apporter une contribution financière", "D. accueillir un enfant chez soi"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe document est un appel aux dons en argent (« Faites un don de 100 dirhams par mois »). Un don d'argent est une contribution financière.",
+            vocabulary: ["parrain → sponsor / godfather", "contribution financière → financial contribution"]
+        },
+        {
+            id: 221,
+            passage: "Le conseil de gestion chargé des questions de déplacements prévoit ce qui suit :\nLorsqu'ils sont disponibles, les véhicules du parc automobile du gouvernement du Yukon devraient être utilisés pour le compte du ministère de l'Éducation, après accord des chefs de service. Ces véhicules ne doivent être conduits que dans le cadre d'activités gouvernementales. Si un employé prend un véhicule du gouvernement du Yukon et souhaite s'adonner à des activités personnelles après les heures de travail, il lui est demandé de recourir à un véhicule privé ou un taxi (à ses propres frais).",
+            question: "221. Ce document a pour but de / d':",
+            options: ["A. identifier les besoins d'achats de véhicules", "B. réguler l'utilisation des véhicules à disposition", "C. rationaliser le nombre de déplacements", "D. informer sur l'état du parc automobile"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte dicte comment, pourquoi et par qui les voitures gouvernementales peuvent être conduites, et interdit formellement leur usage personnel. Il s'agit d'un texte établissant les règles (réguler) d'utilisation de ces véhicules.",
+            vocabulary: ["parc automobile → fleet of vehicles", "s'adonner à → to engage in / to devote oneself to"]
+        },
+        {
+            id: 222,
+            passage: "Le conseil de gestion chargé des questions de déplacements prévoit ce qui suit :\nLorsqu'ils sont disponibles, les véhicules du parc automobile du gouvernement du Yukon devraient être utilisés pour le compte du ministère de l'Éducation, après accord des chefs de service. Ces véhicules ne doivent être conduits que dans le cadre d'activités gouvernementales. Si un employé prend un véhicule du gouvernement du Yukon et souhaite s'adonner à des activités personnelles après les heures de travail, il lui est demandé de recourir à un véhicule privé ou un taxi (à ses propres frais).",
+            question: "222. Les véhicules sont réservés :",
+            options: ["A. au transport de plus de deux employés", "B. aux déplacements professionnels", "C. aux interventions des chefs de service", "D. aux trajets dans le Yukon"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nIl est écrit noir sur blanc : « Ces véhicules ne doivent être conduits que dans le cadre d'activités gouvernementales ». L'usage est donc strictement réservé au cadre professionnel.",
+            vocabulary: ["activités gouvernementales → government/official business"]
+        },
+        {
+            id: 223,
+            passage: "Bonjour,\nJ'ai le plaisir de vous annoncer que le processus de consultation pour l'innovation stratégique est maintenant terminé. Plus de 540 membres de notre institution se sont exprimés en remplissant le questionnaire; votre appui représente une fierté pour nous.\n\nLa consultation s'achève, mais notre projet collectif de réforme ne fait que commencer. Nous allons donner un nouvel élan à notre université avec la création de plans d'action et, surtout, leur mise en œuvre auprès de nos apprenants.\n\nAfin de vous présenter les résultats et vous permettre de rester au cœur des décisions, vous recevrez très bientôt des dates de rencontres.\nAngèle Legrand, directrice générale",
+            question: "223. L'auteure de ce message :",
+            options: ["A. félicite le personnel pour son implication", "B. annonce le lancement d'une consultation", "C. commente les conclusions d'une enquête", "D. précise le calendrier des réunions de travail"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLa directrice indique que plus de 540 membres ont participé et ajoute : « votre appui représente une fierté pour nous ». Elle remercie et félicite donc le personnel pour son engagement et son implication.",
+            vocabulary: ["implication → involvement / commitment"]
+        },
+        {
+            id: 224,
+            passage: "Bonjour,\nJ'ai le plaisir de vous annoncer que le processus de consultation pour l'innovation stratégique est maintenant terminé... La consultation s'achève, mais notre projet collectif de réforme ne fait que commencer. Nous allons donner un nouvel élan à notre université avec la création de plans d’action et, surtout, leur mise en œuvre auprès de nos apprenants.",
+            question: "224. La consultation avait pour objectif :",
+            options: ["A. identifier les enseignants les plus investis", "B. analyser l'impact de la stratégie précédente", "C. initier une ère de développement pour l'institution", "D. de récolter des données sur les étudiants"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLa consultation sert de base à un « projet collectif de réforme » afin de « donner un nouvel élan à notre université ». L'objectif est donc le développement et le renouveau (une nouvelle ère) de l'institution.",
+            vocabulary: ["nouvel élan → new momentum / fresh impetus"]
+        },
+        {
+            id: 225,
+            passage: "Littérature de jeunesse\nUn roman pour adolescents inspiré d'une célèbre série télévisée canadienne. Il est rapidement devenu le livre le plus [1] dans tout le pays. Le lecteur se retrouve dans une ville fictive créée par les personnages originaux. C'est l'occasion pour les jeunes de revivre certains [2] forts de la série!",
+            question: "225. (1)",
+            options: ["A. critiqué", "B. écrit", "C. vendu", "D. enlevé"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nPour exprimer le grand succès d'un livre sur le marché (best-seller), on dit qu'il est devenu le livre « le plus vendu ».",
+            vocabulary: ["le plus vendu → the best-selling"]
+        },
+        {
+            id: 226,
+            passage: "Littérature de jeunesse\nUn roman pour adolescents inspiré d'une célèbre série télévisée canadienne. Il est rapidement devenu le livre le plus [1] dans tout le pays. Le lecteur se retrouve dans une ville fictive créée par les personnages originaux. C'est l'occasion pour les jeunes de revivre certains [2] forts de la série !",
+            question: "226. (2)",
+            options: ["A. décors", "B. moments", "C. projets", "D. acteurs"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nOn revit une expérience ou un souvenir. L'expression consacrée en français pour désigner des scènes intenses et marquantes d'une série est « des moments forts » (highlights / powerful moments).",
+            vocabulary: ["moments forts → highlights / key moments"]
+        },
+        {
+            id: 227,
+            passage: "Recette 1 : Pâtes au pesto (huile d'olive, ail, oignon, tomates séchées, basilic, pâtes)\nRecette 2 : Cake salé (œufs, farine, vin blanc, fromage râpé, jambon, olives...)\nRecette 3 : Risotto aux carottes (riz, blanc de poulet, oignon...)\nRecette 4 : Légumes farcis (tomates, aubergines, bœuf ou agneau haché...)",
+            question: "227. Quelle recette convient aux végétariens ?",
+            options: ["A. Recette 1", "B. Recette 2", "C. Recette 3", "D. Recette 4"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nUn végétarien ne mange ni viande ni poisson. La Recette 2 contient du jambon (porc), la Recette 3 contient du poulet, et la Recette 4 contient du bœuf ou de l'agneau. Seule la Recette 1 (Pâtes au pesto) ne contient aucune viande.",
+            vocabulary: ["végétariens → vegetarians"]
+        },
+        {
+            id: 228,
+            passage: "Graphique 1 | Graphique 2 | Graphique 3 | Graphique 4\n\nCommentaire : « Depuis l'instauration du PACS (Pacte Civil de Solidarité), le mariage marque un ralentissement mais reste quand même majoritaire »",
+            question: "228. Quel graphique correspond au commentaire suivant :",
+            options: ["A. Graphique 1", "B. Graphique 2", "C. Graphique 3", "D. Graphique 4"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe graphique doit montrer deux courbes (mariages et PACS). La courbe des mariages doit légèrement baisser (ralentissement) tout en restant visuellement au-dessus de celle du PACS (reste majoritaire).",
+            vocabulary: ["ralentissement → slowdown", "majoritaire → in the majority"]
+        },
+        {
+            id: 229,
+            passage: "Trois-Rivières\nAppartement lumineux situé au centre-ville de Trois-Rivières, à deux minutes des commerces et des transports. Le logement comprend une chambre, une cuisine rénovée et une salle de bain moderne.\nLes résidents ont accès à une buanderie commune et à un local à vélos.\nUn parking payant est disponible derrière l'immeuble pour ceux qui le souhaitent.\nIdéal pour une personne seule ou un jeune couple",
+            question: "229. Cette petite annonce propose un _____",
+            options: ["A. ascenseur gratuit", "B. jardin communautaire", "C. parking payant", "D. service de ménage"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'annonce indique noir sur blanc : « Un parking payant est disponible derrière l'immeuble ».",
+            vocabulary: ["buanderie commune → shared laundry room"]
+        },
+        {
+            id: 230,
+            passage: "Assistance comptable\nNotre service d'assistance comptable accompagne les clients qui ont perdu l'accès à leur espace en ligne.\nEn cas d'erreur de connexion ou de dossier incomplet, nous vous aidons à recréer un profil afin de sécuriser vos informations et de poursuivre vos démarches.\nLe service est gratuit et disponible du lundi au vendredi.",
+            question: "230. Selon le texte, l'assistance comptable permet surtout de _____.",
+            options: ["A. demander un remboursement immédiat", "B. recréer un profil", "C. télécharger des modèles de factures", "D. fermer un compte existant"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte précise clairement l'action du service d'assistance : « nous vous aidons à recréer un profil afin de sécuriser vos informations ».",
+            vocabulary: ["dossier incomplet → incomplete file"]
+        },
+        {
+            id: 231,
+            passage: "Le tourisme au Ravanda\nLe gouvernement du Ravanda développe une nouvelle stratégie touristique.\nCe programme vise à faire du pays une destination plus attractive pour les voyageurs internationaux en mettant en valeur ses parcs naturels, sa culture et son patrimoine historique.\nPlusieurs investissements sont prévus pour améliorer les infrastructures et promouvoir la région à l'étranger.",
+            question: "231. Le tourisme au Ravanda, _______.",
+            options: ["A. cherche à limiter l'arrivée de visiteurs", "B. vise à faire du pays une destination plus attractive", "C. a réduit le nombre de sites naturels", "D. dépend uniquement du tourisme local"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLa réponse B reprend mot pour mot la phrase du texte : « Ce programme vise à faire du pays une destination plus attractive pour les voyageurs internationaux ».",
+            vocabulary: ["mettre en valeur → to highlight / to showcase"]
+        },
+        {
+            id: 232,
+            passage: "Pollution par les microplastiques\nDes chercheurs alertent sur la présence croissante de déchets dans les régions polaires.\nSelon leurs analyses, la quantité de microplastiques retrouvés dans l'océan Arctique augmente de façon incontrôlée, transportée par les courants marins et l’activité humaine.\nCette évolution menace les écosystèmes fragiles et complique les efforts de préservation.",
+            question: "232. Du plastique dans l'Arctique _______.",
+            options: ["A. disparaît rapidement grâce aux courants", "B. augmente de façon incontrôlée", "C. est désormais totalement interdit", "D. reste sans impact sur l'environnement"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe passage énonce textuellement que la quantité de plastiques « augmente de façon incontrôlée » dans l'océan Arctique.",
+            vocabulary: ["de façon incontrôlée → uncontrollably"]
+        },
+        {
+            id: 233,
+            passage: "La ville de Québec\nLa ville de Québec informe les résidents que des travaux auront lieu sur Avenue Cartier durant toute la semaine.\nPour assurer la sécurité du chantier, une déviation de circulation sera mise en place entre 7 h et 19 h.\nDes panneaux temporaires guideront les automobilistes vers les rues parallèles.",
+            question: "233. Ce message annonce, _______.",
+            options: ["A. la fermeture définitive d'un pont", "B. une déviation de circulation", "C. un événement culturel en centre-ville", "D. l'ouverture d'un nouveau stationnement"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte informe les habitants qu'en raison de travaux, « une déviation de circulation sera mise en place ».",
+            vocabulary: ["déviation de circulation → traffic detour"]
+        },
+        {
+            id: 234,
+            passage: "Dans plusieurs municipalités, un nouveau dispositif social a été mis en place pour améliorer la coordination entre les services publics.\nCe dispositif prévoit un alignement des cellules sociales, afin que les équipes de soutien, de médiation et d'accompagnement travaillent selon les mêmes priorités.\nL'objectif est d'offrir un suivi plus clair et plus cohérent aux familles concemées.",
+            question: "234. Selon le texte, le dispositif _______.",
+            options: ["A. supprime les services d'accompagnement", "B. prévoit un alignement des cellules sociales", "C. limite l'accès aux aides municipales", "D. reporte toutes les interventions à l'année suivante"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte dit texto : « Ce dispositif prévoit un alignement des cellules sociales ».",
+            vocabulary: ["alignement → alignment / coordination", "cellules sociales → social support units"]
+        },
+        {
+            id: 235,
+            passage: "Fleurs couleurs professionnellement\nLe service Fleurs couleurs professionnellement annonce une nouveauté pour ses clients.\nAprès plusieurs mois de préparation, l'entreprise informe de l'ouverture d’un magasin au centre commercial Riviére-Nord.\nLes visiteurs y trouveront des bouquets sur mesure, des plantes rares et un service de décoration florale.",
+            question: "235. Ce message, _______.",
+            options: ["A. signale la fermeture d'un atelier", "B. informe de l'ouverture d'un magasin", "C. propose des cours de jardinage gratuits", "D. annonce une livraison suspendue"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe message a pour but d'annoncer une nouveauté à ses clients : « l'entreprise informe de l'ouverture d'un magasin au centre commercial ».",
+            vocabulary: ["sur mesure → custom-made / bespoke"]
+        },
+        {
+            id: 236,
+            passage: "Trains et cars au départ\nLes horaires indiquent les trains et cars au départ pour différentes villes de la région.\nLes voyageurs peuvent consulter les quais, les plateformes d'embarquement et les correspondances disponibles dans une gare récemment rénovée.\nUn affichage électronique met à jour les heures en temps réel.",
+            question: "236. « Trains et cars au départ » concerne surtout _______.",
+            options: ["A. un centre commercial", "B. une piste cyclable", "C. une gare", "D. un musée municipal"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'information parle de quais, de plateformes d'embarquement, de correspondances et de trains. Tout ce vocabulaire appartient exclusivement à l'univers d'une « gare ».",
+            vocabulary: ["quais → platforms", "correspondances → connections"]
+        },
+        {
+            id: 237,
+            passage: "MESLAN est l’une des plus grandes artistes françaises reconnues à l'international. Elle utilise des médiums variés : sculpture, photographie, performance, vidéo et même réalité augmentée. Elle emploie également des techniques scientifiques et médicales, telles que la chirurgie ou les biotechnologies, pour créer des œuvres multiples, reflet d'une expression artistique particulièrement riche et étonnante.\n\nMESLAN modifie constamment et radicalement les données, dérègle les conventions et s'oppose au déterminisme naturel, social et politique. Son travail dénonce toutes les formes de domination : suprématie masculine, religion, ségrégation culturelle, racisme.",
+            question: "237. L'artiste présenté dans cet article, _______.",
+            options: ["A. dénonce le manque d'éthique du monde médical", "B. milite contre l'usage des biotechnologies.", "C. s'attaque aux inégalités sociales de façon créative.", "D. défend les artistes victimes de pressions politiques."],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte conclut en disant que son travail (créatif) dénonce les formes de domination comme la suprématie masculine, le racisme et la ségrégation (qui sont des inégalités sociales profondes).",
+            vocabulary: ["médiums variés → diverse mediums", "s'oppose au déterminisme → opposes determinism"]
+        },
+        {
+            id: 238,
+            passage: "Ted Beans, économiste australien, s'oppose au sauvetage des banques et affirme que le remède serait encore _____ que la cause.",
+            question: "238. Complétez la phrase :",
+            options: ["A. meilleur", "B. plus lent", "C. pire", "D. plus discret"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'expression idiomatique française est « le remède est pire que le mal » (the cure is worse than the disease). L'économiste pense que l'intervention (sauver les banques) va aggraver la situation.",
+            vocabulary: ["remède pire que le mal → a cure worse than the disease"]
+        },
+        {
+            id: 239,
+            passage: "Il _____ le judo depuis toujours, c'est un passionné !",
+            question: "239. Complétez la phrase :",
+            options: ["A. regarde", "B. pratique", "C. critique", "D. enseigne"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nEn français, le verbe utilisé pour indiquer que l'on s'entraîne et que l'on fait activement un sport (surtout un art martial) est le verbe « pratiquer ».",
+            vocabulary: ["pratiquer un sport → to play/practice a sport"]
+        },
+        {
+            id: 240,
+            passage: "La bibliothèque est _____ jusqu'au 1er septembre pour cause de travaux.",
+            question: "240. Complétez la phrase :",
+            options: ["A. ouverte", "B. fermée", "C. déplacée", "D. réservée"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'expression « pour cause de travaux » indique que l'établissement est en chantier. Par conséquent, l'accès au public est interdit, la bibliothèque est donc « fermée ».",
+            vocabulary: ["pour cause de travaux → due to construction/renovations"]
+        },
+        {
+            id: 241,
+            passage: "Vous travaillez ou vous êtes _____ vacances ?",
+            question: "241. Complétez la phrase :",
+            options: ["A. à", "B. en", "C. dans", "D. pour"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLa préposition correcte avec le mot « vacances » est « en ». On dit toujours : être « en » vacances (to be on vacation).",
+            vocabulary: ["être en vacances → to be on vacation"]
+        },
+        {
+            id: 242,
+            passage: "Peux-tu m'envoyer la _____ par e-mail, s'il te plaît ?",
+            question: "242. Complétez la phrase :",
+            options: ["A. facture", "B. lettre", "C. brochure", "D. invitation"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nC'est la demande la plus logique dans un contexte professionnel ou commercial : on envoie fréquemment une « facture » (invoice) sous format électronique par e-mail.",
+            vocabulary: ["facture → invoice / bill"]
+        },
+        {
+            id: 243,
+            passage: "J'adore le chocolat ! — _____!",
+            question: "243. Complétez la phrase :",
+            options: ["A. pas du tout", "B. moi aussi", "C. je n'aime pas", "D. à demain"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nPour exprimer que l'on partage le même goût ou la même opinion positive que son interlocuteur, l'expression correcte est « moi aussi » (me too).",
+            vocabulary: ["moi aussi → me too"]
+        },
+        {
+            id: 244,
+            passage: "J'ai téléchargé une nouvelle _____ pour apprendre le français.",
+            question: "244. Complétez la phrase :",
+            options: ["A. application", "B. émission", "C. publicité", "D. chaîne"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe verbe « télécharger » s'applique au monde numérique. On télécharge un logiciel ou une « application » sur son téléphone ou son ordinateur.",
+            vocabulary: ["téléchargé → downloaded", "application → app"]
+        },
+        {
+            id: 245,
+            passage: "Marie est très _____ : elle fait du vélo, de la natation et du yoga.",
+            question: "245. Complétez la phrase :",
+            options: ["A. sportive", "B. paresseuse", "C. artistique", "D. gourmande"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nQuelqu'un qui pratique plusieurs activités physiques (vélo, natation, yoga) est logiquement qualifié par l'adjectif « sportive » (athletic).",
+            vocabulary: ["paresseuse → lazy", "natation → swimming"]
+        },
+        {
+            id: 246,
+            passage: "Les articles soldés ne sont ni échangés ni _____.",
+            question: "246. Complétez la phrase :",
+            options: ["A. remboursés", "B. vendus", "C. emballés", "D. livrés"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nC'est la formule commerciale standard affichée dans toutes les boutiques francophones en période de soldes : « ni repris, ni échangés, ni remboursés ».",
+            vocabulary: ["articles soldés → items on sale", "remboursés → refunded"]
+        },
+        {
+            id: 247,
+            passage: "Vous devez ______ les aliments contenant du gluten.",
+            question: "247. Complétez la phrase :",
+            options: ["A. manger", "B. éviter", "C. préparer", "D. acheter"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nDans un contexte de santé ou de régime (allergie au gluten), la consigne médicale est de s'abstenir de consommer ces produits. Le verbe correct est « éviter » (to avoid).",
+            vocabulary: ["éviter → to avoid"]
+        },
+        {
+            id: 248,
+            passage: "Les _____ linguistiques à l'étranger concernent une centaine d'étudiants chaque année.",
+            question: "248. Complétez la phrase :",
+            options: ["A. évasions", "B. visites", "C. rencontres", "D. formations"],
+            correctIndex: 3,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nUn étudiant part à l'étranger pour se former. L'expression pertinente est « formations linguistiques » ou « séjours linguistiques ».",
+            vocabulary: ["formations linguistiques → language training/studies"]
+        },
+        {
+            id: 249,
+            passage: "Il pleut, peux-tu _____ la fenêtre s'il te plait ?",
+            question: "249. Complétez la phrase :",
+            options: ["A. ouvrir", "B. fermer", "C. nettoyer", "D. déplacer"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nS'il pleut, la logique est d'empêcher l'eau d'entrer dans la maison. Il faut donc « fermer » (close) la fenêtre.",
+            vocabulary: ["Il pleut → It's raining", "fermer → to close"]
+        },
+        {
+            id: 251,
+            passage: "Mon stylo est tombé sous ta table, pourrais-tu le _____, s'il te plait ?",
+            question: "251. Complétez la phrase :",
+            options: ["A. jeter", "B. ramasser", "C. déplacer", "D. casser"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nQuand un objet est tombé par terre, l'action de se baisser pour le récupérer du sol s'appelle « ramasser » (to pick up).",
+            vocabulary: ["ramasser → to pick up"]
+        },
+        {
+            id: 252,
+            passage: "Logements pas très sociaux\nDans certaines grandes villes, les prix de l'immobilier ont explosé ces dernières années.\nCertains appartements sont devenus [1] bien au-delà du budget de familles modestes.\nDe plus, certains [2] privilégient les constructions haut de gamme plutôt que les logements abordables, ce qui réduit l'accès au logement pour tous.",
+            question: "252. (1)",
+            options: ["A. modérés", "B. exorbitants", "C. abordables", "D. réduits"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte dit que les prix ont « explosé » et qu'ils sont « bien au-delà du budget ». Ces appartements sont donc hors de prix, c'est-à-dire « exorbitants ».",
+            vocabulary: ["exorbitants → exorbitant / outrageous"]
+        },
+        {
+            id: 253,
+            passage: "Logements pas très sociaux\nDans certaines grandes villes, les prix de l'immobilier ont explosé ces dernières années.\nCertains appartements sont devenus [1] bien au-delà du budget de familles modestes.\nDe plus, certains [2] privilégient les constructions haut de gamme plutôt que les logements abordables, ce qui réduit l'accès au logement pour tous.",
+            question: "253. (2)",
+            options: ["A. locataires", "B. promoteurs", "C. acheteurs", "D. voisins"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nDans le domaine de l'immobilier, ceux qui décident de lancer des « constructions haut de gamme » sont les bâtisseurs et investisseurs immobiliers, appelés « promoteurs » (developers).",
+            vocabulary: ["promoteurs (immobiliers) → real estate developers", "haut de gamme → high-end / luxury"]
+        },
+        {
+            id: 254,
+            passage: "Peintures murales\nLa municipalité a lancé un projet de peintures murales pour embellir le centre-ville et [1] la culture locale.\nLes artistes disposent d'un [2] de trois semaines pour réaliser leurs œuvres avant l'inauguration officielle.",
+            question: "254. (1)",
+            options: ["A. vendre", "B. ignorer", "C. promouvoir", "D. cacher"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe but du projet est positif : embellir la ville et mettre en valeur ses atouts. Le verbe « promouvoir » (to promote) exprime cette idée de mise en valeur de la culture locale.",
+            vocabulary: ["promouvoir → to promote"]
+        },
+        {
+            id: 255,
+            passage: "Peintures murales\nLa municipalité a lancé un projet de peintures murales pour embellir le centre-ville et [1] la culture locale.\nLes artistes disposent d’un [2] de trois semaines pour réaliser leurs œuvres avant l'inauguration officielle.",
+            question: "255. (2)",
+            options: ["A. budget", "B. délai", "C. emplacement", "D. style"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe texte évoque une contrainte de temps : « trois semaines pour réaliser leurs oeuvres avant l'inauguration ». Le temps imparti pour accomplir une tâche s'appelle un « délai » (deadline / timeframe).",
+            vocabulary: ["délai → deadline / timeframe"]
+        },
+        {
+            id: 256,
+            passage: "Moutarde\nLa culture de la moutarde est très répandue dans certaines régions du pays, et elle est cultivée [1] pour l'industrie alimentaire.\nPour obtenir de bonnes graines, les agriculteurs doivent savoir quand [2] les plants et suivre leur croissance de près.",
+            question: "256. (1)",
+            options: ["A. surtout", "B. jamais", "C. rarement", "D. seulement"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'adverbe « surtout » (mainly / mostly) s'insère parfaitement pour indiquer que la moutarde est cultivée principalement à destination de l'industrie alimentaire, sans que ce soit son usage exclusif.",
+            vocabulary: ["surtout → especially / mainly", "répandue → widespread"]
+        },
+        {
+            id: 257,
+            passage: "Moutarde\nLa culture de la moutarde est très répandue dans certaines régions du pays, et elle est cultivée [1] pour l'industrie alimentaire.\nPour obtenir de bonnes graines, les agriculteurs doivent savoir quand [2] les plants et suivre leur croissance de près.",
+            question: "257. (2)",
+            options: ["A. pousser", "B. tomber", "C. récolter", "D. brûler"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nPour obtenir le produit final d'une culture agricole (les graines), l'agriculteur doit ramasser les plantes arrivées à maturité. L'action agricole de recueillir les cultures s'appelle « récolter » (to harvest).",
+            vocabulary: ["récolter → to harvest", "graines → seeds"]
+        },
+        {
+            id: 258,
+            passage: "Nuages\nUne récente étude sur les nuages [1] leur rôle essentiel dans la régulation du climat.\nCependant, les chercheurs expliquent que [2] des instruments scientifiques est nécessaire pour mesurer correctement la formation et le déplacement des nuages.",
+            question: "258. (1)",
+            options: ["A. cache", "B. ignore", "C. démontre", "D. oublie"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe but d'une étude scientifique est d'apporter des preuves. L'étude « démontre » (demonstrates/proves) l'importance du rôle des nuages.",
+            vocabulary: ["démontre → demonstrates / proves"]
+        },
+        {
+            id: 259,
+            passage: "Nuages\nUne récente étude sur les nuages [1] leur rôle essentiel dans la régulation du climat.\nCependant, les chercheurs expliquent que [2] des instruments scientifiques est nécessaire pour mesurer correctement la formation et le déplacement des nuages",
+            question: "259. (2)",
+            options: ["A. l'étalonnage", "B. la barrière", "C. le jardin", "D. le tableau"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nPour qu'un instrument scientifique mesure « correctement », il faut qu'il soit précis et bien réglé. Cette action de calibrage s'appelle l'étalonnage.",
+            vocabulary: ["étalonnage → calibration"]
+        },
+        {
+            id: 260,
+            passage: "Mouvement général\nLe mouvement général dans certaines industries est souvent la conséquence directe [1] entre les employeurs et les employés.\nLes revendications concernent principalement les [2] de travail, les salaires et la sécurité des employés.",
+            question: "260. (1)",
+            options: ["A. de la fête", "B. du conflit", "C. de la pluie", "D. de la musique"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nUn « mouvement général » (une grève) naît d'un désaccord profond entre patronat et syndicats. Il s'agit d'un « conflit » social.",
+            vocabulary: ["conflit → conflict / dispute"]
+        },
+        {
+            id: 261,
+            passage: "Mouvement général\nLe mouvement général dans certaines industries est souvent la conséquence directe [1] entre les employeurs et les employés.\nLes revendications concernent principalement les [2] de travail, les salaires et la sécurité des employés.",
+            question: "261. (2)",
+            options: ["A. horaires", "B. conditions", "C. loisirs", "D. vacances"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLa sécurité, les horaires, les pauses, l'environnement physique sont tous regroupés sous l'expression consacrée « les conditions de travail ».",
+            vocabulary: ["conditions de travail → working conditions"]
+        },
+        {
+            id: 262,
+            passage: "Actuel environnement naturel\nPour profiter pleinement de l'actuel environnement naturel, de nombreux citadins aiment [1] les parcs et les réserves naturelles le week-end\nCes sorties sont souvent considérées comme une véritable [2] face au stress quotidien et au rythme de la ville.",
+            question: "262. (1)",
+            options: ["A. fréquenter", "B. ignorer", "C. éviter", "D. détruire"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe fait d'aller souvent dans un lieu public (parc, réserve) pour s'y promener s'exprime par le verbe « fréquenter » (to visit / to frequent).",
+            vocabulary: ["fréquenter → to frequent / to visit regularly", "citadins → city-dwellers"]
+        },
+        {
+            id: 263,
+            passage: "Actuel environnement naturel\nPour profiter pleinement de l'actuel environnement naturel, de nombreux citadins aiment [1] les parcs et les réserves naturelles le week-end\nCes sorties sont souvent considérées comme une véritable [2] face au stress quotidien et au rythme de la ville.",
+            question: "263. (2)",
+            options: ["A. évasion", "B. ennui", "C. obligation", "D. travail"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nFuir la pression urbaine et la routine pour se ressourcer dans la nature est perçu comme une bouffée d'oxygène, c'est-à-dire une « évasion » (escape).",
+            vocabulary: ["évasion → escape / getaway"]
+        },
+        {
+            id: 264,
+            passage: "À nous l’espace !\nLe programme spatial international se concentre sur la [1] de nouveaux territoires dans le système solaire.\nLes missions utilisent des engins [2] pour transporter les instruments scientifiques et le matériel nécessaire.",
+            question: "264. (1)",
+            options: ["A. conquéte", "B. abandon", "C. échec", "D. retraite"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'exploration humaine de l'univers est historiquement et couramment désignée sous l'expression « la conquête spatiale » (the conquest of space).",
+            vocabulary: ["conquête → conquest"]
+        },
+        {
+            id: 265,
+            passage: "À nous l’espace !\nLe programme spatial international se concentre sur la [1] de nouveaux territoires dans le système solaire.\nLes missions utilisent des engins [2] pour transporter les instruments scientifiques et le matériel nécessaire.",
+            question: "265. (2)",
+            options: ["A. petits", "B. rapides", "C. colossaux", "D. légers"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLes lanceurs (fusées) capables de s'arracher à l'attraction terrestre avec du matériel lourd sont des machines gigantesques. L'adjectif « colossaux » (huge/colossal) est le plus adapté.",
+            vocabulary: ["colossaux → colossal / massive"]
+        },
+        {
+            id: 266,
+            passage: "Décès\nL'historien qui vient de publier son dernier ouvrage a [1] un prix prestigieux.\nIl a également distribué plus de 100 000 [2] de son livre à travers le pays.",
+            question: "266. (1)",
+            options: ["A. perdu", "B. refusé", "C. obtenu", "D. vendu"],
+            correctIndex: 2,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nPour une récompense, on utilise les verbes gagner, recevoir ou « obtenir ». Il a obtenu (he obtained/received) un prix prestigieux.",
+            vocabulary: ["obtenu un prix → obtained/won an award"]
+        },
+        {
+            id: 267,
+            passage: "Décès\nL'historien qui vient de publier son dernier ouvrage a [1] un prix prestigieux.\nIl a également distribué plus de 100 000 [2] de son livre à travers le pays.",
+            question: "267. (2)",
+            options: ["A. copies", "B. feuilles", "C. pages", "D. sections"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe nombre de livres distribués ou vendus s'exprime en exemplaires ou en « copies » (copies).",
+            vocabulary: ["copies → copies (of a book)"]
+        },
+        {
+            id: 268,
+            passage: "Le mariage\nSelon plusieurs études, le mariage des enfants [1] l'accès des filles à l'éducation et limite leur développement.\nFace à cette situation, la communauté internationale est [2] sur la nécessité d'agir pour protéger les droits des enfants.",
+            question: "268. (1)",
+            options: ["A. il freine", "B. il encourage", "C. il développe", "D. il accélère"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe mariage forcé des jeunes filles les empêche d'aller à l'école. Cette pratique ralentit, bloque, c'est-à-dire « freine » (hinders/brakes) leur accès à l'éducation.",
+            vocabulary: ["freiner → to brake / to hinder"]
+        },
+        {
+            id: 269,
+            passage: "Le mariage\nSelon plusieurs études, le mariage des enfants [1] l'accès des filles à l'éducation et limite leur développement.\nFace à cette situation, la communauté internationale est [2] sur la nécessité d'agir pour protéger les droits des enfants.",
+            question: "269. (2)",
+            options: ["A. unanime", "B. divisé", "C. hésitant", "D. controversé"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLa communauté internationale s'accorde totalement (sans division) sur la nécessité de protéger les enfants. Être tous du même avis, c'est être « unanime ».",
+            vocabulary: ["unanime → unanimous"]
+        },
+        {
+            id: 270,
+            passage: "L'étreinte de la pieuvre robot\nJusqu'ici les robots les plus avancés n’arrivaient qu'à effleurer une tasse posée sur une table. Inspirés des pieuvres, ces nouveaux robots possèdent des mains capables de la [1]___. Les chercheurs estiment qu'avec ces robots mous, la robotique est entrée dans une nouvelle [2]",
+            question: "270. (1)",
+            options: ["A. dérober", "B. saisir", "C. fouiller", "D. piquer"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nPrendre fermement un objet avec ses mains/tentacules se dit « saisir » (to grasp). Le robot ne fait plus seulement « effleurer » la tasse, il peut la saisir.",
+            vocabulary: ["effleurer → to brush against / to touch lightly", "saisir → to grasp / to grab"]
+        },
+        {
+            id: 271,
+            passage: "L'étreinte de la pieuvre robot\nJusqu'ici les robots les plus avancés n'arrivaient qu'à effleurer une tasse posée sur une table. Inspirés des pieuvres, ces nouveaux robots possèdent des mains capables de la [1] Les chercheurs estiment qu'avec ces robots mous, la robotique est entrée dans une nouvelle [2]",
+            question: "271. (2)",
+            options: ["A. partition", "B. dimension", "C. expansion", "D. impression"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\n« Entrer dans une nouvelle dimension » est une expression consacrée qui signifie qu'un secteur scientifique a franchi un pallier révolutionnaire.",
+            vocabulary: ["nouvelle dimension → new dimension / new era"]
+        },
+        {
+            id: 272,
+            passage: "Offre 1\nTroglodyte, rien que le terme est déjà un voyage... Plusieurs grottes de pêcheurs ont été transformées en chambres d'hôtes.\nOffre 2\nConfiné dans une bulle... Idéal pour les loups solitaires qui souhaitent se retirer du monde pour vivre en forêt...\nOffre 3\nLes chasseurs d'hôtels insolites vont se réjouir. Le château de Fontainebleau ouvre ses portes pour découvrir des façons de vivre ancestrales...\nOffre 4\nAmateurs de sport d'hiver et aventuriers, cette destination unique est faite pour vous ! Dormir dans un igloo est devenu LA tendance écologique du moment : seul ou en couple, vous pouvez être sûrs de respirer un bon bol d’air frais !",
+            question: "272. Quel poste demande des compétences linguistiques ? (⚠️ Erreur probable de l'examen d'origine : 'Quel séjour correspond à un voyage lointain/exotique ?')",
+            options: ["A. Offre 1", "B. Offre 2", "C. Offre 3", "D. Offre 4"],
+            correctIndex: 3,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nL'Offre 4 décrit un séjour dans un igloo (environnement arctique international/touristique), ce qui justifie selon l'examen le recours aux langues étrangères.",
+            vocabulary: ["igloo → igloo", "loups solitaires → lone wolves"]
+        },
+        {
+            id: 273,
+            passage: "Critique 1\nL'auteur a su vulgariser son travail, mais certains détails techniques restent difficiles à comprendre pour les non-spécialistes.\nCritique 2\nÉtant sensible à la culture scientifique, cette critique souligne que l'œuvre rend la science accessible au grand public, tout en maintenant la rigueur nécessaire.\nCritique 3\nL'œuvre est jugée trop courte et manque d'illustrations, ce qui rend la lecture moins attrayante pour certains lecteurs.\nCritique 4\nLe style littéraire est apprécié, mais certaines parties sont jugées trop théoriques pour un public général.",
+            question: "273. Quelle critique reflète l'aspect abordable de l'œuvre pour le grand public ?",
+            options: ["A. Critique 1", "B. Critique 2", "C. Critique 3", "D. Critique 4"],
+            correctIndex: 1,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLa Critique 2 salue le fait que l'auteur « rend la science accessible au grand public ». C'est l'exact synonyme de rendre l'œuvre « abordable ».",
+            vocabulary: ["accessible / abordable → accessible / approachable"]
+        },
+        {
+            id: 274,
+            passage: "Critique 1\nLe scénario présente des idées intéressantes mais manque de profondeur... ce qui réduit l'impact global...\nCritique 2\nLes acteurs livrent des performances correctes, mais certaines scènes paraissent longues...\nCritique 3\nLa réalisation technique est moyenne et la bande-son n'accompagne pas toujours les moments clés...\nCritique 4\nUn film à petit budget, mais remarquable par sa créativité et son histoire captivante. Les acteurs sont convaincants, et le réalisateur réussit à transmettre des émotions authentiques... C'est un exemple d'ingéniosité et de talent...",
+            question: "274. Parmi les critiques, laquelle est la plus positive ?",
+            options: ["A. Critique 1", "B. Critique 2", "C. Critique 3", "D. Critique 4"],
+            correctIndex: 3,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLes critiques 1, 2 et 3 sont mitigées et pointent de lourds défauts. La Critique 4, au contraire, ne tarit d'éloges : « remarquable », « captivante », « convaincants », « talent ». C'est une critique extrêmement positive.",
+            vocabulary: ["ingéniosité → ingenuity", "captivante → captivating"]
+        },
+        {
+            id: 275,
+            passage: "Restaurant 1\nPassionné de cuisine depuis toujours, je viens d'ouvrir mon restaurant... Mon ambition est de vous offrir un menu différent tous les jours en fonction de la pêche locale. Notre équipe sélectionne nos produits frais directement au port. On vous attend!\nRestaurant 2\nSitué en bord de mer, notre bar-restaurant vous propose midi et soir des pizzas et des desserts maisons...\nRestaurant 3\nNotre restaurant vous invite à un voyage en Italie! Venez découvrir la spécialité du chef, les lasagnes aux tomates et à la viande hachée...\nRestaurant 4\nVous cherchez un restaurant végétarien ? C’est notre spécialité !...",
+            question: "275. Lequel des restaurants est spécialisé dans les produits de la mer ?",
+            options: ["A. Restaurant 1", "B. Restaurant 2", "C. Restaurant 3", "D. Restaurant 4"],
+            correctIndex: 0,
+            explanation: "**Pourquoi la bonne réponse est justifiée :**\nLe Restaurant 1 base son menu sur la « pêche locale » (local fishing) et achète ses produits frais « directement au port ». Cela garantit une spécialité de poissons et fruits de mer.",
+            vocabulary: ["produits de la mer → seafood", "pêche locale → local catch/fishing"]
+        }
+    ];
+
+    let currentMode = 'order';
+    let currentPool = [];
+    let currentIndex = 0;
+    let score = 0;
+    let totalAnswered = 0;
+    let mistakes = new Set();
+    let examAnswers = [];
+
+    function updateStats() {
+        if (currentMode === 'exam') return; 
+        let pct = totalAnswered === 0 ? 0 : Math.round((score / totalAnswered) * 100);
+        document.getElementById('stats-display').innerText = `Score: ${score} / ${totalAnswered} | Accuracy: ${pct}%`;
+        document.getElementById('question-counter').innerText = `Question ${currentIndex + 1} / ${currentPool.length}`;
+    }
+
+    function startMode(mode) {
+        currentMode = mode;
+        score = 0;
+        totalAnswered = 0;
+        currentIndex = 0;
+        examAnswers = [];
+        
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('exam-summary').classList.add('hidden');
+
+        if (mode === 'order' || mode === 'exam') {
+            currentPool = [...questions];
+            if (mode === 'exam') {
+                document.getElementById('stats-display').innerText = "EXAM MODE (Answers hidden until end)";
+            }
+        } else if (mode === 'random') {
+            currentPool = [...questions].sort(() => Math.random() - 0.5);
+        } else if (mode === 'review') {
+            currentPool = questions.filter(q => mistakes.has(q.id));
+            if (currentPool.length === 0) {
+                alert("Aucune erreur à réviser ! / No mistakes to review!");
+                startMode('order');
+                return;
+            }
+        }
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if (currentIndex >= currentPool.length) {
+            if (currentMode === 'exam') showExamSummary();
+            return;
+        }
+
+        const q = currentPool[currentIndex];
+        document.getElementById('passage-text').innerText = q.passage;
+        document.getElementById('question-text').innerText = q.question;
+        document.getElementById('explanation-container').style.display = 'none';
+        
+        const optsContainer = document.getElementById('options-container');
+        optsContainer.innerHTML = '';
+        
+        q.options.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => selectAnswer(idx, btn);
+            optsContainer.appendChild(btn);
+        });
+
+        document.getElementById('next-btn').classList.add('hidden');
+        document.getElementById('prev-btn').classList.toggle('hidden', currentIndex === 0 || currentMode === 'exam');
+        updateStats();
+    }
+
+    function selectAnswer(selectedIndex, btnNode) {
+        const q = currentPool[currentIndex];
+        const optsContainer = document.getElementById('options-container');
+        const buttons = optsContainer.getElementsByTagName('button');
+        
+        for (let b of buttons) b.disabled = true;
+
+        if (currentMode === 'exam') {
+            examAnswers.push({ id: q.id, selected: selectedIndex, correct: q.correctIndex });
+            btnNode.style.borderColor = "var(--text)";
+            document.getElementById('next-btn').classList.remove('hidden');
+            return;
+        }
+
+        totalAnswered++;
+        const isCorrect = (selectedIndex === q.correctIndex);
+        
+        if (isCorrect) {
+            score++;
+            btnNode.classList.add('correct');
+            document.getElementById('verdict-title').innerText = "✓ Correct";
+            document.getElementById('verdict-title').style.color = "var(--correct)";
+            if(currentMode === 'review') mistakes.delete(q.id); 
+        } else {
+            btnNode.classList.add('incorrect');
+            buttons[q.correctIndex].classList.add('correct');
+            document.getElementById('verdict-title').innerText = "✗ Incorrect";
+            document.getElementById('verdict-title').style.color = "var(--incorrect)";
+            mistakes.add(q.id);
+        }
+
+        document.getElementById('explanation-text').innerHTML = q.explanation.replace(/\n/g, '<br>');
+        const vocabList = document.getElementById('vocab-list');
+        vocabList.innerHTML = '';
+        q.vocabulary.forEach(v => {
+            let li = document.createElement('li');
+            li.innerText = v;
+            vocabList.appendChild(li);
+        });
+        
+        document.getElementById('explanation-container').style.display = 'block';
+        document.getElementById('next-btn').classList.remove('hidden');
+        updateStats();
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        loadQuestion();
+    }
+
+    function prevQuestion() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            loadQuestion();
+        }
+    }
+
+    function showExamSummary() {
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('exam-summary').classList.remove('hidden');
+        
+        let correctCount = examAnswers.filter(a => a.selected === a.correct).length;
+        let pct = Math.round((correctCount / examAnswers.length) * 100);
+        
+        examAnswers.forEach(a => { if(a.selected !== a.correct) mistakes.add(a.id); });
+        
+        document.getElementById('exam-results').innerHTML = `
+            Total Score: ${correctCount} / ${examAnswers.length}<br>
+            Percentage: ${pct}%<br>
+            Incorrect Answers Logged: ${examAnswers.length - correctCount}
+        `;
+        document.getElementById('stats-display').innerText = `Exam Finished - ${pct}%`;
+    }
+
+    window.onload = () => startMode('order');
+</script>
+</body>
+</html>
