@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>TEF Canada - Compréhension Écrite (Q275-Q342)</title>
+    <style>
+        :root {
+            --bg: #f9f9fb;
+            --text: #2c3e50;
+            --primary: #3498db;
+            --correct: #27ae60;
+            --incorrect: #e74c3c;
+            --panel-bg: #ffffff;
+            --border: #e0e0e0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #app {
+            width: 100%;
+            max-width: 900px;
+            margin: 20px;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .nav-buttons button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        .nav-buttons button:hover {
+            opacity: 0.9;
+        }
+        .stats {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .passage-box {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            font-size: 18px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .question-box {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .option-btn {
+            background-color: var(--panel-bg);
+            border: 2px solid var(--border);
+            padding: 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+        }
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            background-color: #f1f8ff;
+        }
+        .option-btn:disabled {
+            cursor: not-allowed;
+            color: #555;
+        }
+        .correct {
+            border-color: var(--correct) !important;
+            background-color: #eafaf1 !important;
+            color: #1d8348 !important;
+            font-weight: bold;
+        }
+        .incorrect {
+            border-color: var(--incorrect) !important;
+            background-color: #fdedec !important;
+            color: #922b21 !important;
+        }
+        .explanation-box {
+            display: none;
+            background-color: #fdfefe;
+            border-left: 5px solid var(--primary);
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            line-height: 1.5;
+        }
+        .explanation-box h4 {
+            margin-top: 0;
+        }
+        .footer-nav {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        .footer-nav button {
+            background-color: var(--text);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="header">
+        <div class="nav-buttons">
+            <button onclick="startMode('order')">Practice in Order</button>
+            <button onclick="startMode('random')">Random Question</button>
+            <button onclick="startMode('exam')">Full Exam Mode</button>
+            <button onclick="startMode('review')">Review My Mistakes</button>
+        </div>
+        <div class="stats" id="stats-display">
+            Score: 0 / 0 | Accuracy: 0%
+        </div>
+    </div>
+
+    <div id="quiz-container">
+        <div class="passage-box" id="passage-text"></div>
+        <div class="question-box" id="question-text"></div>
+        <div class="options" id="options-container"></div>
+        
+        <div class="explanation-box" id="explanation-container">
+            <h4 id="verdict-title"></h4>
+            <div id="explanation-text"></div>
+        </div>
+
+        <div class="footer-nav">
+            <button id="prev-btn" class="hidden" onclick="prevQuestion()">[Previous]</button>
+            <span id="question-counter" style="align-self: center; font-weight: bold;"></span>
+            <button id="next-btn" class="hidden" onclick="nextQuestion()">[Next]</button>
+        </div>
+    </div>
+    
+    <div id="exam-summary" class="hidden passage-box">
+        <h2>Exam Completed</h2>
+        <p id="exam-results"></p>
+        <button onclick="startMode('review')" style="padding:10px; background:var(--primary); color:white; border:none; border-radius:5px; cursor:pointer;">Review Mistakes</button>
+    </div>
+</div>
+
+<script>
+    // BASE DE DONNÉES : QUESTIONS 275 à 342
+    const questions = [
+        {
+            id: 275,
+            passage: `Restaurant 1\nPassionné de cuisine depuis toujours, je viens d'ouvrir mon restaurant et vous propose une cuisine authentique. Mon ambition est de vous offrir un menu différent tous les jours en fonction de la pêche locale. Notre équipe sélectionne nos produits frais directement au port. On vous attend!\n\nRestaurant 2\nSitué en bord de mer, notre bar-restaurant vous propose midi et soir des pizzas et des desserts maisons. L'après-midi, au soleil ou sous les parasols, venez apprécier une bonne salade de fruits ou des boissons fraîches. En famille ou entre amis, vous êtes les bienvenus !\n\nRestaurant 3\nNotre restaurant vous invite à un voyage en Italie! Ici, notre cuisine est méditerranéenne et haute en couleur, le tout pour un excellent rapport qualité-prix. Venez découvrir la spécialité du chef, les lasagnes aux tomates et à la viande hachée. Toute l'équipe vous attend pour partager un agréable moment.\n\nRestaurant 4\nVous cherchez un restaurant végétarien ? C’est notre spécialité ! Sur notre carte signée par une équipe internationale, vous découvrirez une très large variété de plats à base de légumes, et même de fruits! Les plus petits apprécieront les menus enfants et l'aire de jeux face à la mer.`,
+            question: `275. Lequel des restaurants est spécialisé dans les produits de la mer ?`,
+            options: [`A. Restaurant 1`, `B. Restaurant 2`, `C. Restaurant 3`, `D. Restaurant 4`],
+            correctIndex: 0,
+            explanation: `Il parle de « pêche locale » et de produits frais sélectionnés directement au port, donc il est spécialisé dans les produits de la mer.`
+        },
+        {
+            id: 276,
+            passage: `Événement 1\nLa Fête des Fleurs, organisée depuis 75 ans, célèbre la beauté des jardins locaux avec des concours de fleurs, des ateliers et des expositions.\n\nÉvénement 2\nLe Marché du Terroir, inauguré il y a 60 ans, met en avant les producteurs locaux et les spécialités culinaires régionales, permettant aux visiteurs de découvrir des saveurs authentiques.\n\nÉvénement 3\nLe Festival Centenaire de la Musique a été créé pour célébrer le 100e anniversaire de l'orchestre municipal. Depuis sa création, il a lieu chaque année et, pour marquer son 200e concert, l'édition de cette année double les spectacles et les activités, rendant la célébration encore plus exceptionnelle.\n\nÉvénement 4\nLa Course Historique, organisée depuis 50 ans, retrace les parcours traditionnels des coureurs locaux et propose différentes distances adaptées aux participants de tous âges.`,
+            question: `276. Quel événement double une action centenaire ?`,
+            options: [`A. Événement 1`, `B. Événement 2`, `C. Événement 3`, `D. Événement 4`],
+            correctIndex: 2,
+            explanation: `L'Événement 3, le Festival Centenaire de la Musique, double son activité en célébrant son 200e concert, ce qui correspond à l'idée de “doubler une action centenaire”. Les autres événements ne mentionnent pas de doublement lié à un anniversaire centenaire.`
+        },
+        {
+            id: 277,
+            passage: `Opéra 1\nUn drame lyrique classique qui raconte une histoire tragique de passion et de trahison. Les décors somptueux et les costumes détaillés plongent le spectateur dans un univers intense et émouvant.\n\nOpéra 2\nCette opérette charmante et légère raconte les aventures comiques d’un personnage maladroit. Les dialogues humoristiques, les airs entraînants et les situations absurdes créent une atmosphère amusante qui séduit petits et grands.\n\nOpéra 3\nUn opéra romantique centré sur une histoire d'amour impossible. Les émotions fortes et les solos dramatiques touchent profondément le public.\n\nOpéra 4\nUn opéra contemporain abordant des thèmes sociaux sérieux, avec une mise en scène minimaliste et des effets sonores innovants. L'œuvre est intense et suscite la réflexion.`,
+            question: `277. Quel opéra peut être qualifié d'amusant ?`,
+            options: [`A. Opéra 1`, `B. Opéra 2`, `C. Opéra 3`, `D. Opéra 4`],
+            correctIndex: 1,
+            explanation: `L'Opéra 2, cette opérette, est décrite comme légère et comique, avec des situations absurdes et des dialogues humoristiques. Les autres opéras sont dramatiques, romantiques ou sérieux, donc moins amusants.`
+        },
+        {
+            id: 278,
+            passage: `L'application Play Musique\n\nMadame Simplon,\n\nNous avons le plaisir de vous présenter notre nouvelle application Play Musique, conçue pour enrichir votre expérience musicale. Cette application propose une gamme élargie de services, allant de la création de playlists personnalisées à l'accès à des contenus exclusifs.\n\nPour bénéficier de toutes les fonctionnalités décrites, il faut que l'utilisatrice se connecte à son espace personnel. Cela permet de synchroniser ses préférences, ses playlists et d'accéder aux recommandations adaptées à son profil.\n\nNous restons à votre disposition pour toute information complémentaire.\n\nBien cordialement,\nL'équipe Play Musique`,
+            question: `278. Madame Simplon, ______`,
+            options: [`A. ignore les nouvelles fonctionnalités`, `B. se voit proposer une gamme élargie de services`, `C. supprime son compte`, `D. recommande une autre application`],
+            correctIndex: 1,
+            explanation: `Le texte indique clairement que l'application propose une gamme élargie de services pour enrichir l'expérience musicale.`
+        },
+        {
+            id: 279,
+            passage: `L'application Play Musique\n\nMadame Simplon,\n\nNous avons le plaisir de vous présenter notre nouvelle application Play Musique, conçue pour enrichir votre expérience musicale. Cette application propose une gamme élargie de services, allant de la création de playlists personnalisées à l'accès à des contenus exclusifs.\n\nPour bénéficier de toutes les fonctionnalités décrites, il faut que l'utilisatrice se connecte à son espace personnel. Cela permet de synchroniser ses préférences, ses playlists et d'accéder aux recommandations adaptées à son profil.\n\nNous restons à votre disposition pour toute information complémentaire.\n\nBien cordialement,\nL'équipe Play Musique`,
+            question: `279. Pour bénéficier des fonctionnalités décrites, il faut que l’utilisatrice ______`,
+            options: [`A. se connecte à son espace personnel`, `B. crée un nouveau compte bancaire`, `C. télécharge un logiciel tiers`, `D. achète un abonnement papier`],
+            correctIndex: 0,
+            explanation: `Le texte précise que pour accéder aux fonctionnalités et aux recommandations personnalisées, l’utilisatrice doit se connecter à son espace personnel.`
+        },
+        {
+            id: 280,
+            passage: `Charte pour bien vivre ensemble !\n\nLa présente charte a été mise en place afin de favoriser une cohabitation harmonieuse entre tous les habitants de l'immeuble. Elle rappelle l'importance du respect des espaces communs et de la tranquillité de chacun.\n\nParmi les principales recommandations :\n— Limiter les nuisances sonores et olfactives pour préserver la qualité de vie.\n— Maintenir les parties communes propres et ordonnées.\n— Respecter les horaires pour le nettoyage et la gestion des déchets.\n— Les animaux sont autorisés sous certaines conditions, notamment pour garantir la sécurité et le confort de tous les résidents.`,
+            question: `280. Cette charte a pour objectif principal :`,
+            options: [`A. de décorer les parties communes`, `B. de limiter les nuisances`, `C. d'interdire les visiteurs`, `D. d'organiser des événements sportifs`],
+            correctIndex: 1,
+            explanation: `Le texte insiste sur le respect de la tranquillité et de la cohabitation. L'objectif principal de la charte est donc de limiter les nuisances pour tous les habitants.`
+        },
+        {
+            id: 281,
+            passage: `Charte pour bien vivre ensemble !\n\nLa présente charte a été mise en place afin de favoriser une cohabitation harmonieuse entre tous les habitants de l'immeuble. Elle rappelle l'importance du respect des espaces communs et de la tranquillité de chacun.\n\nParmi les principales recommandations :\n— Limiter les nuisances sonores et olfactives pour préserver la qualité de vie.\n— Maintenir les parties communes propres et ordonnées.\n— Respecter les horaires pour le nettoyage et la gestion des déchets.\n— Les animaux sont autorisés sous certaines conditions, notamment pour garantir la sécurité et le confort de tous les résidents.`,
+            question: `281. D'après ce document, _______`,
+            options: [`A. les animaux sont interdits`, `B. les animaux sont autorisés`, `C. les animaux doivent étre vaccinés uniquement`, `D. les animaux doivent rester dans les parties communes`],
+            correctIndex: 1,
+            explanation: `Le texte précise que les animaux sont autorisés sous certaines conditions, afin de préserver la sécurité et le confort des résidents.`
+        },
+        {
+            id: 282,
+            passage: `Bonsoir,\nNous vous présentons ce document afin de recueillir vos avis sur le contenu proposé. Le document a été remanié pour publication afin de clarifier certaines informations et le rendre plus accessible à un large public.\n\nL'auteur de ce courrier invite ses lecteurs à formuler des commentaires pour améliorer la qualité du document et assurer que toutes les informations soient correctes et compréhensibles.\n\nMerci de votre participation.\n\nBien cordialement,\nL'équipe de rédaction`,
+            question: `282. Le document prépare, _______`,
+            options: [`A. ignoré pour diffusion`, `B. remanié pour publication`, `C. supprimé`, `D. traduit en plusieurs langues`],
+            correctIndex: 1,
+            explanation: `Le texte indique clairement que le document a été remanié pour publication, c’est-à-dire modifié pour être plus clair et accessible au public.`
+        },
+        {
+            id: 283,
+            passage: `Bonsoir,\nNous vous présentons ce document afin de recueillir vos avis sur le contenu proposé. Le document a été remanié pour publication afin de clarifier certaines informations et le rendre plus accessible à un large public.\n\nL'auteur de ce courrier invite ses lecteurs à formuler des commentaires pour améliorer la qualité du document et assurer que toutes les informations soient correctes et compréhensibles.\n\nMerci de votre participation.\n\nBien cordialement,\nL'équipe de rédaction`,
+            question: `283. L'auteur de ce courrier demande à ses lecteurs de _______`,
+            options: [`A. lire sans rien dire`, `B. formuler des commentaires`, `C. supprimer le document`, `D. partager sur les réseaux sociaux`],
+            correctIndex: 1,
+            explanation: `L'auteur invite les lecteurs à formuler des commentaires afin d'améliorer la qualité du document et s'assurer de la clarté des informations.`
+        },
+        {
+            id: 284,
+            passage: `Le français au travail\n\nDans la fonction publique québécoise, l'usage de la langue francaise est primordial. Les employés sont encouragés à communiquer en français, à respecter les règles linguistiques officielles et à favoriser un environnement de travail inclusif et cohérent.\n\nSelon Mme Tremblay, directrice des communications, rencontrer le personnel uniquement en français conforte le francais et montre l'exemple, renforçant ainsi la présence et la valeur de la langue au sein de l'organisation.`,
+            question: `284. Dans la fonction publique québécoise, _______`,
+            options: [`A. l'usage de la langue française est primordial`, `B. l'anglais est obligatoire`, `C. le télétravail est interdit`, `D. la hiérarchie est flexible`],
+            correctIndex: 0,
+            explanation: `Le texte souligne que l'usage de la langue française est central et encouragé dans la fonction publique québécoise.`
+        },
+        {
+            id: 285,
+            passage: `Le français au travail\n\nDans la fonction publique québécoise, l'usage de la langue française est primordial. Les employés sont encouragés à communiquer en français, à respecter les règles linguistiques officielles et à favoriser un environnement de travail inclusif et cohérent.\n\nSelon Mme Tremblay, directrice des communications, rencontrer le personnel uniquement en français conforte le français et montre l'exemple, renforçant ainsi la présence et la valeur de la langue au sein de l'organisation.`,
+            question: `285. Selon Mme Tremblay, rencontrer le personnel uniquement en français _______`,
+            options: [`A. conforte le français`, `B. complique la communication`, `C. réduit l'efficacité`, `D. est facultatif`],
+            correctIndex: 0,
+            explanation: `Mme Tremblay précise que rencontrer le personnel uniquement en français conforte le français et renforce la valeur de la langue au travail.`
+        },
+        {
+            id: 286,
+            passage: `La passion du partage\n\nÀ Casablanca, un club d'étudiants motivés et réveurs organise régulièrement des séances de lecture intitulées « Une heure de lecture ». Malgré les intimidations et les interdictions de rassemblements publics, ces jeunes communautés littéraires pratiquent la lecture à l'air libre, sur la place publique.\n\nAu-delà du manque évident d'infrastructures et de bibliothèques accessibles, il s’agit surtout pour Mehdi Selbi, membre du club, de créer une interaction directe avec les jeunes en dehors des espaces officiels, austères et élitistes qui font peur aux jeunes.\n\nPour l'éditrice et écrivaine Kenza Sefrioui, ce genre d'initiatives est à encourager car ce sont des jeunes qui se mobilisent entre eux, encouragent une lecture analytique et initient des débats d'actualité, ce qui est un véritable acte citoyen.\n\nElle rappelle également que si la lecture est un droit humain, il y a peu d’espoir de construire des générations de lecteurs dans un pays qui ne compte pas plus de 600 bibliothèques publiques pour plus de 35 millions d'habitants. Une mobilisation générale est primordiale pour inciter les pouvoirs publics à améliorer les équipements et les infrastructures afin que les jeunes puissent avoir accès aux livres.`,
+            question: `286. D'après le texte, à Casablanca, _______`,
+            options: [`A. un projet d'aménagement culturel est prévu très prochainement.`, `B. un cercle littéraire révolutionnaire a émergé dans la ville.`, `C. le gouvernement subventionne les initiatives citoyennes locales.`, `D. la jeunesse est à l'initiative d'une vague de protestation.`],
+            correctIndex: 1,
+            explanation: `Le texte parle d'un club d'étudiants qui organise des séances de lecture publiques appelées « Une heure de lecture ». Cela montre l'apparition d'un cercle littéraire initié par des jeunes, et non d'un projet gouvernemental ou d'une protestation.`
+        },
+        {
+            id: 288,
+            passage: `Le tourisme spatial\n\nAvec l'émergence du tourisme spatial, de nouvelles questions environnementales et éthiques se posent. Ce type de tourisme dispose des ressources au profit d'un divertissement, mobilisant des technologies coûteuses et une énergie considérable pour envoyer quelques privilégiés en orbite, alors que ces moyens pourraient être utilisés pour des besoins plus essentiels sur Terre.\n\nD'après l’auteur, le tourisme spatial alimenterait le fantasme de la conquête humaine sur la nature, en donnant l'impression que l'homme peut dominer l'espace et exploiter la planète sans limites, renforçant des perceptions idéalisées de supériorité sur l’environnement naturel.`,
+            question: `288. Le tourisme spatial pose un problème car il _______`,
+            options: [`A. dispose des ressources au profit d'un divertissement`, `B. réduit les émissions de CO2`, `C. favorise l'économie locale`, `D. aide à la recherche scientifique`],
+            correctIndex: 0,
+            explanation: `Le texte explique que le tourisme spatial mobilise des ressources pour le divertissement, ce qui soulève des problèmes d'éthique et d'utilisation des moyens disponibles.`
+        },
+        {
+            id: 291,
+            passage: `Pour une langue qui étincelle et qui tranche\n\nDans le journalisme, la clarté et la précision de la langue sont essentielles. Selon l'article, un journaliste doit s’en tenir à la langue faisant objet d’un commun accord, afin de garantir la compréhension du plus grand nombre et d'éviter toute ambiguïté.\n\nL'auteur ajoute que s'inspirer de manière créative et décomplexée de la langue participe a la lutte contre le permis unique, en encourageant la diversité des expressions et en refusant une uniformisation stricte qui limiterait la richesse linguistique.`,
+            question: `291. Selon l'auteur, s'inspirer de manière décomplexée de la langue _______`,
+            options: [`A. nuit à la clarté`, `B. participe à la lutte contre le permis unique`, `C. est interdit dans les médias`, `D. uniformise la langue`],
+            correctIndex: 1,
+            explanation: `S’inspirer librement de la langue encourage la diversité et lutte contre le permis unique, c’est-à-dire contre l'uniformisation stricte des usages linguistiques.`
+        },
+        {
+            id: 292,
+            passage: `Le Principe du Partage Salarial\n\nLe partage salarial est un dispositif permettant aux travailleurs indépendants de bénéficier de certains avantages liés au salariat tout en conservant leur autonomie. Le dispositif requiert l'attente d'un montant de recettes minimum avant de déclencher certains droits, afin de garantir un fonctionnement équilibré et durable.\n\nCe système offre ainsi la possibilité de travailler en indépendant avec les avantages du salariat, comme la couverture sociale, la sécurité juridique et l'accès à la formation, tout en gardant la liberté de gérer son activité de manière autonome.`,
+            question: `292. Le dispositif _______`,
+            options: [`A. ignore les recettes générées`, `B. requiert l'attente d'un montant de recettes minimum`, `C. interdit tout travail indépendant`, `D. fonctionne sans conditions`],
+            correctIndex: 1,
+            explanation: `Le texte précise que le dispositif requiert un montant de recettes minimum avant que certains droits liés au partage salarial puissent être activés.`
+        },
+        {
+            id: 293,
+            passage: `Le Principe du Partage Salarial\n\nLe partage salarial est un dispositif permettant aux travailleurs indépendants de bénéficier de certains avantages liés au salariat tout en conservant leur autonomie. Le dispositif requiert l'attente d'un montant de recettes minimum avant de déclencher certains droits, afin de garantir un fonctionnement équilibré et durable.\n\nCe système offre ainsi la possibilité de travailler en indépendant avec les avantages du salariat, comme la couverture sociale, la sécurité juridique et l'accès à la formation, tout en gardant la liberté de gérer son activité de manière autonome.`,
+            question: `293. Quelle phrase résume le mieux le partage salarial ?`,
+            options: [`A. « Travailler en indépendant sans aucune protection »`, `B. « Travailler en indépendant avec les avantages du salariat »`, `C. « Devenir salarié à plein temps »`, `D. « Partager ses revenus avec d'autres indépendants »`],
+            correctIndex: 1,
+            explanation: `Le texte indique que le partage salarial permet de conserver son indépendance tout en bénéficiant des avantages du salariat, ce qui correspond parfaitement à la phrase choisie.`
+        },
+        {
+            id: 294,
+            passage: `Le couple moderne\n\nÀ l'ère contemporaine, certains sociologues évoquent l'émergence de l'individu-roi, une personne centrée sur ses propres besoins et aspirations. Cette attitude remet en question sa relation, car la priority accordée à l'épanouissement personnel peut parfois entrer en conflit avec les compromis nécessaires à la vie à deux.\n\nD'après Le Monde, le couple moderne crée des paradoxes dans la vie amoureuse, entre liberté individuelle et engagement, désir de proximité et besoin d'indépendance. Ces tensions reflètent les défis contemporains auxquels les couples doivent faire face pour équilibrer autonomie et lien affectif.`,
+            question: `294. L'individu-roi, _______`,
+            options: [`A. favorise toujours la cohésion du couple`, `B. remet en question sa relation`, `C. ignore ses propres besoins`, `D. se conforme aux attentes traditionnelles`],
+            correctIndex: 1,
+            explanation: `Le texte souligne que l'individu-roi remet en question sa relation en mettant son épanouissement personnel au centre, ce qui peut créer des tensions dans le couple.`
+        },
+        {
+            id: 295,
+            passage: `Le couple moderne\n\nÀ l'ère contemporaine, certains sociologues évoquent l'émergence de l'individu-roi, une personne centrée sur ses propres besoins et aspirations. Cette attitude remet en question sa relation, car la priorité accordée à l'épanouissement personnel peut parfois entrer en conflit avec les compromis nécessaires à la vie à deux.\n\nD'après Le Monde, le couple moderne crée des paradoxes dans la vie amoureuse, entre liberté individuelle et engagement, désir de proximité et besoin d'indépendance. Ces tensions reflètent les défis contemporains auxquels les couples doivent faire face pour équilibrer autonomie et lien affectif.`,
+            question: `295. D'après Le Monde, le couple moderne, _______`,
+            options: [`A. est toujours harmonieux`, `B. crée des paradoxes dans la vie amoureuse`, `C. ignore la liberté individuelle`, `D. supprime toute tension`],
+            correctIndex: 1,
+            explanation: `Le Monde indique que le couple moderne crée des paradoxes, en conciliant autonomie et engagement, liberté et proximité, ce qui illustre les tensions caractéristiques des couples contemporains.`
+        },
+        {
+            id: 296,
+            passage: `Ne laissez personne pour compris (ONU, 2019)\n\nLe rapport publié par l'ONU en 2019 souligne les défis auxquels sont confrontés les systèmes de mesure dans différents pays. Ce rapport montre les insuffisances des systèmes de mesure, notamment en termes de collecte de données et de suivi des populations vulnérables.\n\nLes problèmes soulevés ont pour origine des failles systématiques et une politique inadéquate, ce qui empêche une évaluation précise et efficace des besoins de toutes les populations, et limite la capacité à prendre des décisions éclairées pour le développement durable.`,
+            question: `296. Ce rapport, _______`,
+            options: [`A. ignore les systèmes de mesure`, `B. montre les insuffisances des systemes de mesure`, `C. félicite les politiques publiques`, `D. ne propose aucune donnée`],
+            correctIndex: 1,
+            explanation: `Le texte précise que le rapport montre les insuffisances des systèmes de mesure, en mettant en évidence les lacunes dans la collecte de données et le suivi des populations.`
+        },
+        {
+            id: 297,
+            passage: `Ne laissez personne pour compris (ONU, 2019)\n\nLe rapport publié par l'ONU en 2019 souligne les défis auxquels sont confrontés les systèmes de mesure dans différents pays. Ce rapport montre les insuffisances des systèmes de mesure, notamment en termes de collecte de données et de suivi des populations vulnérables.\n\nLes problèmes soulevés ont pour origine des failles systématiques et une politique inadéquate, ce qui empêche une évaluation précise et efficace des besoins de toutes les populations, et limite la capacité à prendre des décisions éclairées pour le développement durable.`,
+            question: `297. Les problèmes soulevés ont pour origine ______`,
+            options: [`A. des failles systématiques et une politique inadéquate`, `B. un manque de formation uniquement`, `C. des ressources financières illimitées`, `D. des événements naturels`],
+            correctIndex: 0,
+            explanation: `Le texte indique que les difficultés viennent de failles systémiques et d'une politique inadéquate, ce qui empêche une gestion efficace et précise des systèmes de mesure.`
+        },
+        {
+            id: 298,
+            passage: `Les aînés du Québec\n\nLe Québec accorde une attention particulière au bien-être de ses aînés. Selon l’article, les services aux aînés doivent être améliorés pour répondre efficacement à leurs besoins en matière de santé, de loisirs et d'accompagnement social.\n\nLa Journée internationale des aînés est célébrée chaque année et constitue une occasion de valoriser le rôle des personnes âgées, de souligner leur contribution à la société et de sensibiliser le public à l'importance de leur inclusion et de leur bien-être.`,
+            question: `298. D'après l'article, _______`,
+            options: [`A. les services aux aînés doivent être améliorés`, `B. les services aux jeunes sont prioritaires`, `C. les aînés ne nécessitent aucun soutien`, `D. la santé des aînés est optimale`],
+            correctIndex: 0,
+            explanation: `Le texte indique clairement que les services aux aînés doivent être améliorés pour mieux répondre à leurs besoins sociaux, médicaux et récréatifs.`
+        },
+        {
+            id: 299,
+            passage: `Les aînés du Québec\n\nLe Québec accorde une attention particulière au bien-être de ses aînés. Selon l’article, les services aux aînés doivent être améliorés pour répondre efficacement à leurs besoins en matière de santé, de loisirs et d'accompagnement social.\n\nLa Journée internationale des aînés est célébrée chaque année et constitue une occasion de valoriser le rôle des personnes âgées, de souligner leur contribution à la société et de sensibiliser le public à l'importance de leur inclusion et de leur bien-être.`,
+            question: `299. La Journée internationale des aînés est l'occasion de, _______`,
+            options: [`A. ignorer les besoins des aînés`, `B. valoriser le rôle des personnes âgées`, `C. réduire les services aux jeunes`, `D. célébrer uniquement les employés`],
+            correctIndex: 1,
+            explanation: `Cette journée vise à valoriser le rôle des personnes âgées, en reconnaissant leur contribution à la société et en sensibilisant le public à leur bien-être et inclusion.`
+        },
+        {
+            id: 300,
+            passage: `La mauvaise éducation\n\nL'histoire de l'éducation au Maroc montre que le pays a connu un âge d’or avant une descente fracassante. Pendant cette période prospère, les infrastructures scolaire étaient solides, les enseignants qualifiés et l'accès à l'éducation plus largement disponible.\n\nD'après ce texte, le système éducatif a favorisé la jeunesse et donné des moyens mieux partagés, offrant à un plus grand nombre d'étudiants la possibilité de bénéficier d'un enseignement de qualité et de contribuer au développement du pays.`,
+            question: `300. L'éducation marocaine passée, _______`,
+            options: [`A. a été inexistante`, `B. a connu un âge d'or avant une descente fracassante`, `C. n'a jamais changé`, `D. a seulement reculé`],
+            correctIndex: 1,
+            explanation: `Le texte indique clairement que l'éducation marocaine a connu un âge d'or avant de décliner, soulignant à la fois une période prospère et une phase de difficultés ultérieures.`
+        },
+        {
+            id: 301,
+            passage: `La mauvaise éducation\n\nL'histoire de l'éducation au Maroc montre que le pays a connu un âge d’or avant une descente fracassante. Pendant cette période prospère, les infrastructures scolaires étaient solides, les enseignants qualifiés et l'accès à l'éducation plus largement disponible.\n\nD'après ce texte, le système éducatif a favorisé la jeunesse et donné des moyens mieux partagés, offrant à un plus grand nombre d'étudiants la possibilité de bénéficier d'un enseignement de qualité et de contribuer au développement du pays.`,
+            question: `301. D'après ce texte, le système, _____`,
+            options: [`A. a favorisé la jeunesse et donné des moyens mieux partagés`, `B. a été fermé à tous les jeunes`, `C. a seulement soutenu l'élite`, `D. n'a jamais eu de réformes`],
+            correctIndex: 0,
+            explanation: `Le texte précise que le système éducatif a favorisé la jeunesse et permis une meilleure répartition des moyens, donnant accès à l'éducation à un plus grand nombre d'étudiants.`
+        },
+        {
+            id: 302,
+            passage: `Dans la fonction publique québécoise\n\nLe Québec met un accent particulier sur le respect des droits et devoirs dans la fonction publique. Le mémorial du génocide rappelle à tous les fonctionnaires l'importance d'agir en conformité avec le devoir, notamment en matière de respect de la mémoire et de la dignité des victimes.\n\nPar ailleurs, la question de la langue est centrale : dans la fonction publique québécoise, la langue officielle doit être utilisée pour toutes les communications officielles, garantissant ainsi l'accessibilité, l'égalité et le respect des règles linguistiques.`,
+            question: `302. Le mémorial du génocide, _______`,
+            options: [`A. rappelle l'importance du devoir`, `B. ignore les responsabilités`, `C. est un lieu de divertissement`, `D. supprime les règles`],
+            correctIndex: 0,
+            explanation: `Le texte précise que le mémorial incite à pratiquer le devoir, en rappelant l'importance du respect des obligations professionnelles et de la mémoire historique.`
+        },
+        {
+            id: 303,
+            passage: `Dans la fonction publique québécoise\n\nLe Québec met un accent particulier sur le respect des droits et devoirs dans la fonction publique. Le mémorial du génocide rappelle à tous les fonctionnaires l'importance d'agir en conformité avec le devoir, notamment en matière de respect de la mémoire et de la dignité des victimes.\n\nPar ailleurs, la question de la langue est centrale : dans la fonction publique québécoise, la langue officielle doit être utilisée pour toutes les communications officielles, garantissant ainsi l'accessibilité, l'égalité et le respect des règles linguistiques.`,
+            question: `303. D'après le texte, dans la fonction publique québécoise, ___`,
+            options: [`A. la langue officielle doit être utilisée`, `B. toutes les langues sont interdites`, `C. l'anglais est obligatoire`, `D. aucune règle linguistique n'existe`],
+            correctIndex: 0,
+            explanation: `Le texte indique que la langue officielle (le français) doit être utilisée dans toutes les communications officielles, pour garantir l'égalité et le respect des règles linguistiques.`
+        },
+        {
+            id: 304,
+            passage: `Avenant au contrat de location\n\nChère locataire,\n\nConformément à votre contrat, la locataire doit contacter l'entreprise de maintenance pour tout problème technique survenu dans le logement. Cette procédure garantit une intervention rapide et efficace, tout en respectant les obligations contractuelles.\n\nCe document informe sur la marche à suivre après un problème technique, en détaillant les étapes à respecter, les coordonnées de l'entreprise et les délais d'intervention.\n\nNous vous remercions de votre collaboration.`,
+            question: `304. La locataire doit, _______`,
+            options: [`A. ignorer les problèmes techniques`, `B. contacter l'entreprise de maintenance`, `C. réparer elle-même les installations`, `D. informer uniquement le voisin`],
+            correctIndex: 1,
+            explanation: `Le texte précise que la locataire doit contacter l'entreprise de maintenance pour tout problème technique afin de garantir une intervention appropriée.`
+        },
+        {
+            id: 305,
+            passage: `Avenant au contrat de location\n\nChère locataire,\n\nConformément à votre contrat, la locataire doit contacter l'entreprise de maintenance pour tout problème technique survenu dans le logement. Cette procédure garantit une intervention rapide et efficace, tout en respectant les obligations contractuelles.\n\nCe document informe sur la marche à suivre après un problème technique, en détaillant les étapes à respecter, les coordonnées de l'entreprise et les délais d'intervention.\n\nNous vous remercions de votre collaboration.`,
+            question: `305. Ce document informe sur, _______`,
+            options: [`A. la marche à suivre après un problème technique`, `B. les vacances des locataires`, `C. les tarifs des loyers`, `D. l'historique du bâtiment`],
+            correctIndex: 0,
+            explanation: `Le document explique les étapes à suivre en cas de problème technique, incluant les contacts et les délais d'intervention, afin de clarifier la procédure pour la locataire.`
+        },
+        {
+            id: 306,
+            passage: `L'info du jour\n\nBonjour,\n\nNous vous présentons ce document afin de présenter des objectifs de concours en ligne récemment lancés par notre entreprise. L'initiative vise à améliorer les compétences et a offrir des opportunités d’apprentissage flexibles.\n\nL'entreprise organisatrice souhaite faire collaborer des personnes ayant des horaires variés, en utilisant des outils numériques et des plateformes interactives pour permettre à chacun de participer selon ses disponibilités.\n\nMerci de votre attention et bonne participation !`,
+            question: `306. Ce document, _______`,
+            options: [`A. ignore les objectifs du concours`, `B. présente des objectifs de concours en ligne`, `C. annonce une réunion interne`, `D. critique un projet scolaire`],
+            correctIndex: 1,
+            explanation: `Le texte indique clairement que le document a pour but de présenter des objectifs de concours en ligne, afin d'informer les participants et d'encourager leur engagement.`
+        },
+        {
+            id: 307,
+            passage: `L'info du jour\n\nBonjour,\n\nNous vous présentons ce document afin de présenter des objectifs de concours en ligne récemment lancés par notre entreprise. L'initiative vise à améliorer les compétences et à offrir des opportunités d'apprentissage flexibles.\n\nL'entreprise organisatrice souhaite faire collaborer des personnes ayant des horaires variés, en utilisant des outils numériques et des plateformes interactives pour permettre à chacun de participer selon ses disponibilités.\n\nMerci de votre attention et bonne participation !`,
+            question: `307. L'entreprise organisatrice souhaite, _______`,
+            options: [`A. limiter la participation à certains horaires`, `B. faire collaborer des personnes ayant des horaires variés`, `C. exclure les participants en ligne`, `D. organiser un événement physique uniquement`],
+            correctIndex: 1,
+            explanation: `Le texte précise que l'entreprise souhaite permettre la collaboration entre personnes avec des horaires différents, en utilisant des outils numériques pour faciliter la participation de tous.`
+        },
+        {
+            id: 308,
+            passage: `Quel avenir pour le cinéma ?\n\nL'auteur s'interroge sur l'évolution du cinéma face aux nouvelles plateformes de streaming et aux changements dans les habitudes des spectateurs. Il trouve surprenant qu'on s'interroge sur le devenir du cinéma, car selon lui, le septième art a toujours su s'adapter aux innovations et aux défis.\n\nD'après l'auteur, le cinéma en salle garde toute son importance dans le contexte actuel, offrant une expérience unique, collective et immersive que le visionnage à domicile ne peut pas totalement reproduire.`,
+            question: `308. L'auteur de l'article trouve surprenant _______`,
+            options: [`A. qu'on s'interroge sur le devenir du cinéma`, `B. que les films soient projetés en salle`, `C. que les acteurs travaillent`, `D. que les spectateurs aiment le cinéma`],
+            correctIndex: 0,
+            explanation: `Le texte indique que l'auteur est surpris qu'on questionne l'avenir du cinéma, soulignant sa capacité à s'adapter et sa durabilité.`
+        },
+        {
+            id: 309,
+            passage: `Quel avenir pour le cinéma ?\n\nL'auteur s'interroge sur l'évolution du cinéma face aux nouvelles plateformes de streaming et aux changements dans les habitudes des spectateurs. Il trouve surprenant qu'on s'interroge sur le devenir du cinéma, car selon lui, le septième art a toujours su s'adapter aux innovations et aux défis.\n\nD'après l'auteur, le cinéma en salle garde toute son importance dans le contexte actuel, offrant une expérience unique, collective et immersive que le visionnage à domicile ne peut pas totalement reproduire.`,
+            question: `309. D'après l'auteur, le cinéma en salle _______`,
+            options: [`A. est devenu inutile`, `B. garde toute son importance dans le contexte actuel`, `C. sera remplacé par le streaming`, `D. est réservé à quelques spectateurs`],
+            correctIndex: 1,
+            explanation: `L'auteur précise que le cinéma en salle reste important, car il offre une expérience unique et collective que le visionnage en ligne ne peut pas totalement remplacer.`
+        },
+        {
+            id: 310,
+            passage: `La corniche se transforme\n\nLa municipalité informe les habitants que des travaux ont été planifiés le long de la comiche. Ce communiqué a pour but de justifier une prise de décision, en expliquant les raisons des modifications et l'impact attendu sur les riverains et les visiteurs.\n\nLe projet vise également à sécuriser l'accès aux espaces non aménagés, en améliorant les infrastructures, en ajoutant des barrières et en réaménageant certaines zones pour garantir la sécurité de tous.`,
+            question: `310. Ce communiqué _______`,
+            options: [`A. ignore les riverains`, `B. justifie une prise de décision`, `C. annonce une féte`, `D. critique un projet existant`],
+            correctIndex: 1,
+            explanation: `Le texte indique que le communiqué vise a justifier la décision de la municipalité et a informer les habitants des travaux et de leurs objectifs.`
+        },
+        {
+            id: 311,
+            passage: `La corniche se transforme\n\nLa municipalité informe les habitants que des travaux ont été planifiés le long de la corniche. Ce communiqué a pour but de justifier une prise de décision, en expliquant les raisons des modifications et l'impact attendu sur les riverains et les visiteurs.\n\nLe projet vise également à sécuriser l'accès aux espaces non aménagés, en améliorant les infrastructures, en ajoutant des barrières et en réaménageant certaines zones pour garantir la sécurité de tous.`,
+            question: `311. Ce projet vise à _______`,
+            options: [`A. construire un centre commercial`, `B. sécuriser l'accès aux espaces non aménagés`, `C. fermer la corniche au public`, `D. supprimer les zones de promenade`],
+            correctIndex: 1,
+            explanation: `Le texte précise que le projet a pour objectif principal de sécuriser les zones non aménagées, afin de protéger les visiteurs et de rendre les lieux plus sûrs.`
+        },
+        {
+            id: 312,
+            passage: `Annexes sur le harcèlement et l'abus\n\nLe document contient plusieurs annexes destinées à guider les employés et les responsables.\n— Annexe 1, 2 et 3 détaillent les procédures et les contacts à suivre en cas de harcèlement ou d'abus. Ces annexes fournissent un cadre clair pour agir rapidement et efficacement, protéger les victimes et signaler les incidents conformément aux règles de l'entreprise ou de l'institution.\n\nLe document précise également les mesures à prendre pour traiter ces situations, y compris les procédures pour les renvoyer, afin d'assurer la sécurité et le respect de tous les membres du personnel.`,
+            question: `312. Le document contient _______`,
+            options: [`A. des recommandations pour la fête annuelle`, `B. des informations sur le financement`, `C. les étapes à suivre en cas de harcèlement ou d'abus`, `D. des horaires de réunion`],
+            correctIndex: 2,
+            explanation: `Le texte indique clairement que les annexes fournissent les étapes à suivre en cas de harcèlement ou d'abus, afin de guider les actions et protéger les victimes.`
+        },
+        {
+            id: 313,
+            passage: `Annexes sur le harcèlement et l'abus\n\nLe document contient plusieurs annexes destinées à guider les employés et les responsables.\n— Annexe 1, 2 et 3 détaillent les procédures et les contacts à suivre en cas de harcèlement ou d'abus. Ces annexes fournissent un cadre clair pour agir rapidement et efficacement, protéger les victimes et signaler les incidents conformément aux règles de l’entreprise ou de l'institution.\n\nLe document précise également les mesures à prendre pour traiter ces situations, y compris les procédures pour les renvoyer, afin d'assurer la sécurité et le respect de tous les membres du personnel`,
+            question: `313. Selon le document, les annexes précisent également les procédures _______`,
+            options: [`A. pour les renvoyer`, `B. pour les féliciter`, `C. pour les ignorer`, `D. pour organiser une réunion`],
+            correctIndex: 0,
+            explanation: `Le texte indique que le document détaille les procédures pour renvoyer les responsables ou agir en cas de harcèlement, garantissant ainsi la sécurité et le respect des personnes concernées.`
+        },
+        {
+            id: 314,
+            passage: `Bonjour à tous,\n\nL'auteur de ce message invite les utilisateurs à redoubler de prudence lorsqu'ils utilisent les services en ligne. Il souligne les risques liés aux fraudes et rappelle l'importance de vérifier toutes les informations avant de répandre ou de partager des données personnelles.\n\nLe message précise également que les fraudeurs obtiennent leurs informations des victimes, souvent par des méthodes trompeuses comme le phishing, et recommande des mesures pour se protéger et éviter toute perte ou abus.`,
+            question: `314. L'auteur de ce message, _______`,
+            options: [`A. ignore les utilisateurs`, `B. invite les utilisateurs à redoubler de prudence`, `C. encourage les utilisateurs à partager leurs mots de passe`, `D. critique les plateformes en ligne`],
+            correctIndex: 1,
+            explanation: `Le texte indique clairement que l'auteur invite les utilisateurs à être prudents, en mettant en garde contre les fraudes et les risques en ligne.`
+        },
+        {
+            id: 315,
+            passage: `Bonjour à tous,\n\nL'auteur de ce message invite les utilisateurs à redoubler de prudence lorsqu'ils utilisent les services en ligne. II souligne les risques liés aux fraudes et rappelle l'importance de vérifier toutes les informations avant de répondre ou de partager des données personnelles\n\nLe message précise également que les fraudeurs obtiennent leurs informations des victimes, souvent par des méthodes trompeuses comme le phishing, et recommande des mesures pour se protéger et éviter toute perte ou abus.`,
+            question: `315. Les fraudeurs, _______`,
+            options: [`A. créent leurs propres informations`, `B. obtiennent leurs informations des victimes`, `C. ignorent les utilisateurs`, `D. travaillent uniquement pour la sécurité`],
+            correctIndex: 1,
+            explanation: `Le texte précise que les fraudeurs obtiennent les informations des victimes, généralement par des techniques trompeuses, ce qui justifie l'avertissement de l’auteur.`
+        },
+        {
+            id: 316,
+            passage: `Madame lvonova\n\nMadame Ivonova informe les responsables qu’elle doit renvoyer du matériel utilisé dans le cadre de son activité ou de son contrat. Cette procédure est nécessaire pour clore correctement les engagements contractuels et garantir le retour des équipements en bon état.\n\nPar ailleurs, Madame Ivonova souhaite mettre un terme à son contrat, indiquant sa décision de ne plus poursuivre ses obligations professionnelles ou administratives avec l'organisation concemée.`,
+            question: `316. Madame Ivonova doit, _____`,
+            options: [`A. conserver le matériel`, `B. renvoyer du matériel`, `C. acheter du matériel supplémentaire`, `D. ignorer le matériel`],
+            correctIndex: 1,
+            explanation: `Le texte indique clairement que Madame Ivonova doit renvoyer le matériel conformément aux procédures contractuelles et aux engagements pris.`
+        },
+        {
+            id: 317,
+            passage: `Madame lvonova\n\nMadame Ivonova informe les responsables qu'elle doit renvoyer du matériel utilisé dans le cadre de son activité ou de son contrat. Cette procédure est nécessaire pour clore correctement les engagements contractuels et garantir le retour des équipements en bon état.\n\nPar ailleurs, Madame Ivonova souhaite mettre un terme à son contrat, indiquant sa décision de ne plus poursuivre ses obligations professionnelles ou administratives avec l'organisation concemée.`,
+            question: `317. Madame lvonova souhaite, ___`,
+            options: [`A. prolonger son contrat`, `B. mettre un terme à son contrat`, `C. transférer son contrat à quelqu'un d'autre`, `D. ignorer les obligations contractuelles`],
+            correctIndex: 1,
+            explanation: `Le texte précise que Madame Ivonova souhaite mettre fin à son contrat, ce qui justifie la nécessité de restituer le matériel et de clore correctement les engagements.`
+        },
+        {
+            id: 318,
+            passage: `Règlement relatif aux ressources humaines\n\nLe règlement précise que ce document a pour objectif d’encadrer les subventions aux chercheurs retraités, en définissant les conditions, les procédures et les critères d'attribution afin de garantir une gestion transparente et équitable des ressources.\n\nLe texte indique également que les avantages octroyés peuvent être spécifiques aux personnes retraitées, en fonction de leur ancienneté, de leurs contributions et des politiques en vigueur, afin d'adapter le soutien aux besoins particuliers de cette catégorie de chercheurs.`,
+            question: `318. Ce document a pour objectif d'encadrer, _____`,
+            options: [`A. les congés des étudiants`, `B. les subventions aux chercheurs retraités`, `C. les horaires de travail`, `D. les événements culturels`],
+            correctIndex: 1,
+            explanation: `Le texte précise que l'objectif du document est de réglementer les subventions accordées aux chercheurs retraités, en définissant les conditions et procédures à suivre.`
+        },
+        {
+            id: 319,
+            passage: `Règlement relatif aux ressources humaines\n\nLe règlement précise que ce document a pour objectif d'encadrer les subventions aux chercheurs retraités, en définissant les conditions, les procédures et les critères d'attribution afin de garantir une gestion transparente et équitable des ressources.\n\nLe texte indique également que les avantages octroyés peuvent être spécifiques aux personnes retraitées, en fonction de leur ancienneté, de leurs contributions et des politiques en vigueur, afin d'adapter le soutien aux besoins particuliers de cette catégorie de chercheurs.`,
+            question: `319. Les avantages octroyés, _______`,
+            options: [`A. sont identiques pour tous les employés`, `B. peuvent être spécifiques aux personnes retraitées`, `C. concernent uniquement les étudiants`, `D. sont automatiquement attribués sans conditions`],
+            correctIndex: 1,
+            explanation: `Le texte indique que les avantages peuvent être adaptés aux retraités, selon leurs besoins et contributions, afin de garantir une attribution équitable et ciblée.`
+        },
+        {
+            id: 320,
+            passage: `Le droit, un défi majeur pour une réforme respectueuse des droits des enfants\n\nSelon l'article, dans certaines régions, les enfants travaillent pour subvenir aux besoins de leurs familles, contribuant ainsi au revenu familial dans des contextes économiques difficiles.\n\nLe texte précise également que certains programmes et initiatives visent à promouvoir la protection des enfants et le respect de leurs droits, en réduisant le travail des mineurs et en encourageant l'éducation et le développement.\n\nL'auteur de Particle déplore le manque de règles pour les jeunes travailleurs, soulignant importance d’une législation claire et efficace pour protéger les enfants et garantir leur sécurité, leur éducation et leur bien-être.`,
+            question: `320. Les enfants travaillent pour. _____`,
+            options: [`A. s'amuser`, `B. subvenir aux besoins de leurs familles`, `C. voyager`, `D. ignorer l'école`],
+            correctIndex: 1,
+            explanation: `Le texte indique que les enfants travaillent pour subvenir aux besoins de leurs familles, contribuant au revenu familial dans des contextes économiques difficiles.`
+        },
+        {
+            id: 321,
+            passage: `Le droit, un défi majeur pour une réforme respectueuse des droits des enfants\n\nSelon l'article, dans certaines régions, les enfants travaillent pour subvenir aux besoins de leurs familles, contribuant ainsi au revenu familial dans des contextes économiques difficiles\n\nLe texte précise également que certains programmes et initiatives visent à promouvoir la protection des enfants et le respect de leurs droits, en réduisant le travail des mineurs et en encourageant l'éducation et le développement.\n\nL'auteur de l'article déplore le manque de règles pour les jeunes travailleurs, soulignant l'importance d'une législation claire et efficace pour protéger les enfants et garantir leur sécurité, leur éducation et leur bien-être.`,
+            question: `321. Certains programmes visent à, _______`,
+            options: [`A. promouvoir la protection des enfants`, `B. pour jouer`, `C. sans but précis`, `D. pour voyager`],
+            correctIndex: 0,
+            explanation: `Le texte montre que certaines initiatives viennent promouvoir la protection des enfants et réduire le travail des mineurs.`
+        },
+        {
+            id: 322,
+            passage: `Le droit, un defi majeur pour une réforme respectueuse des droits des entants\n\nSelon l'article, dans certaines régions, les enfants travaillent pour subvenir aux besoins de leurs familles, contribuant ainsi au revenu familial dans des contextes économiques difficiles.\n\nLe texte précise également que certains programmes et initiatives visent à promouvoir la protection des enfants et le respect de leurs droits, en réduisant le travail des mineurs et en encourageant l'éducation et le développement.\n\nL'auteur de l'article déplore le manque de règles pour les jeunes travailleurs, soulignant l'importance d’une législation claire et efficace pour protéger les enfants et garantir leur sécurité, leur éducation et leur bien-être.`,
+            question: `322. L'auteur de l’article déplore, _______`,
+            options: [`A. le manque de règles pour les jeunes travailleurs`, `B. l'excès de lois`, `C. les vacances des enfants`, `D. le soutien familial`],
+            correctIndex: 0,
+            explanation: `L'auteur souligne le manque de législation et de règles pour les jeunes travailleurs, ce qui est un obstacle à la protection de leurs droits et à leur sécurité.`
+        },
+        {
+            id: 323,
+            passage: `Article L115261 du code du travail\n\nL'article L115261 du code du travail informe sur les mesures de protection des salariés, en détaillant les obligations de l'employeur et les droits des travailleurs dans différents contextes professionnels:\n\nIl précise également les mesures relatives aux ressources humaines, notamment concernant l'acquisition de matériaux par les personnes, pour assurer le bon fonctionnement des services et la sécurité au travail\n\nEnfin, cet article précise les droits des victimes de harcèlement au travail, en garantissant des recours et des protections adaptées pour prévenir et traiter les situations de harcèlement ou d'abus dans le milieu professionnel.`,
+            question: `323. Ce document informe sur, _______`,
+            options: [`A. les vacances des salariés`, `B. les mesures de protection des salariés`, `C. les horaires des bureaux`, `D. les réunions internes`],
+            correctIndex: 1,
+            explanation: `Le texte indique que l'article détaille les mesures de protection des salariés, garantissant leur sécurité et leurs droits au sein de l'entreprise.`
+        },
+        {
+            id: 324,
+            passage: `Article L115261 du code du travail\n\nL'article L115261 du code du travail informe sur les mesures de protection des salariés, en détaillant les obligations de l'employeur et les droits des travailleurs dans différents contextes professionnels.\n\nIl précise également les mesures relatives aux ressources humaines, notamment concernant l'acquisition de matériaux par les personnes, pour assurer le bon fonctionnement des services et la sécurité au travail\n\nEnfin, cet article précise les droits des victimes de harcélement au travail, en garantissant des recours et des protections adaptées pour prévenir et traiter les situations de harcèlement ou d'abus dans le milieu professionnel`,
+            question: `324. Mesures relatives aux ressources humaines, _______`,
+            options: [`A. l'acquisition de matériaux par les personnes`, `B. les congés scolaires`, `C. les loisirs des employés`, `D. les voyages professionnels`],
+            correctIndex: 0,
+            explanation: `Le texte précise que certaines mesures RH concernent l'acquisition de matériaux par les salariés, afin d'assurer le fonctionnement et la sécurité des services.`
+        },
+        {
+            id: 325,
+            passage: `Article L115261 du code du travail\n\nL'article L115261 du code du travail informe sur les mesures de protection des salariés, en détaillant les obligations de l'employeur et les droits des travailleurs dans différents contextes professionnels.\n\nIl précise également les mesures relatives aux ressources humaines, notamment concernant l'acquisition de matériaux par les personnes, pour assurer le bon fonctionnement des services et la sécurité au travail.\n\nEnfin, cet article précise les droits des victimes de harcèlement au travail, en garantissant des recours et des protections adaptées pour prévenir et traiter les situations de harcèlement ou d'abus dans le milieu professionnel`,
+            question: `325. Cet article précise les droits, _______`,
+            options: [`A. des responsables de l'entreprise`, `B. des victimes de harcèlement au travail`, `C. des étudiants`, `D. des fournisseurs`],
+            correctIndex: 1,
+            explanation: `Le texte souligne que l'article protège les victimes de harcèlement au travail, en leur assurant des recours et protections légales adaptées.`
+        },
+        {
+            id: 326,
+            passage: `Gaz : la Première ministre promet qu'il n'y aura pas de coupure pour les particuliers en cas de ______ énergétique.`,
+            question: `326. Complétez la phrase :`,
+            options: [`A. chute`, `B. recul`, `C. récession`, `D. pénurie`],
+            correctIndex: 3,
+            explanation: `Il s’agit d’un manque d'énergie disponible. On parle de pénurie énergétique.`
+        },
+        {
+            id: 327,
+            passage: `Le mariage précoce avant 18 ans prive les jeunes filles mariées de leurs droits. Il [1] aussi les efforts de lutte contre la pauvreté et entrave les objectifs de croissance économique. [2] les experts rappellent que garder les filles à l’école entraîne une baisse du taux de mortalité et une hausse du revenu des femmes sur le marché du travail.`,
+            question: `327. (1)`,
+            options: [`A. freine`, `B. circonscrit`, `C. immobilise`, `D. amortit`],
+            correctIndex: 0,
+            explanation: `Le mariage précoce ralentit le développement économique (il freine les efforts).`
+        },
+        {
+            id: 328,
+            passage: `Le mariage précoce avant 18 ans prive les jeunes filles mariées de leurs droits. II [1] aussi les efforts de lutte contre la pauvreté et entrave les objectifs de croissance économique. [2] , les experts rappellent que garder les filles à l’école entraîne une baisse du taux de mortalité et une hausse du revenu des femmes sur le marché du travail.`,
+            question: `328. (2)`,
+            options: [`A. Unanimes`, `B. Totaux`, `C. Communs`, `D. Généraux`],
+            correctIndex: 0,
+            explanation: `Les experts sont tous d'accord (unanimes) sur l'importance de l'éducation des filles.`
+        },
+        {
+            id: 329,
+            passage: `Chaque professeur peut ______ des livres neufs pour sa classe.`,
+            question: `329. Complétez la phrase :`,
+            options: [`A. changer`, `B. oublier`, `C. regarder`, `D. acheter`],
+            correctIndex: 3,
+            explanation: `Le verbe acheter convient car un professeur peut acheter des livres neufs pour sa classe.`
+        },
+        {
+            id: 330,
+            passage: `Nous encourageons les habitants de la ville de Montréal à rester chez eux suite à l'avis de ______ deneige.`,
+            question: `330. Complétez la phrase :`,
+            options: [`A. bataille`, `B. tempête`, `C. présence`, `D. passage`],
+            correctIndex: 1,
+            explanation: `L'expression correcte est « avis de tempête de neige », qui justifie le fait de demander aux habitants de rester chez eux.`
+        },
+        {
+            id: 331,
+            passage: `Critique 1\nL'écrivaine et plasticienne suisse livre un superbe deuxième roman, qui raconte l'histoire d'une femme tentant de résoudre l'énigme de son grand-père collectionneur d'art. Sous la forme originale d’un journal intime, le style est personnel.\n\nCritique 2\nAu musée des Beaux-Arts de Rouen sont installées des œuvres sur la relation amoureuse entre l'écrivain surréaliste André Breton et la jeune femme Nadja. Vous pourrez admirer l'extravagant Portrait de femme en bleu et le splendide tableau Idylle.\n\nCritique 3\nCette pièce tragique et politique met en scène le comédien Micha Lescot qui joue à la perfection le rôle d’un tyran. Les spectateurs apprécieront aussi le décor luxueux de ce petit théâtre transformé en royaume.\n\nCritique 4\nAdapté d’une BD, ce film est l'histoire d’une jeune femme trentenaire qui a perdu la mémoire. La réalisatrice a fait appel à Sara Giraudeau pour incarner le personnage principal. Devant la caméra, elle installe immédiatement un climat surprenant.`,
+            question: `331. Quelle critique présente une exposition ?`,
+            options: [`A. Critique 1`, `B. Critique 2`, `C. Critique 3`, `D. Critique 4`],
+            correctIndex: 1,
+            explanation: `La critique 2 décrit des œuvres installées au musée des Beaux-Arts, ce qui correspond à une exposition d'art.`
+        },
+        {
+            id: 332,
+            passage: `Biais cognitif 1\nFace à des informations qui semblent nous concerner, notre cerveau aime bien composer : il aime se fabriquer une image sympathique de nous-même en fabriquant du sens, à partir de ce dont il se rappelle de notre histoire, de nos sensations. C’est l'effet Barnum, avec quelques bribes d'informations vagues données sur nous, comme c'est le cas avec les horoscopes.\n\nBiais cognitif 2\nSur un phénomène qui a une probabilité très faible de se produire dans un temps donné, nous nous concentrons sur les rares cas qui fonctionnent en effaçant les échecs. Nous créons alors une solide illusion d'efficacité appelée « le biais du survivant ». Il s'agit d'une forme de biais de sélection, qui nous fait préférer les événements confirmant nos attentes et croyances.\n\nBiais cognitif 3\nLe principe nommé « escalade de l'engagement » est un processus cérébral simple mais puissant. Il consiste à faire des choix qui vont dans le sens d’une décision prise précédemment, même si cette décision initiale a conduit à l'échec. Notre cerveau raisonne à partir de la quantité de temps, d’argent ou d'affect investie, ce qui justifie d'accroître l'investissement.\n\nBiais cognitif 4\nLors d'un raisonnement « panglossien », nous triturons le contexte pour prêter des intentions aux individus, en évincant certains facteurs de situation. Ce raisonnement à rebours est destiné à conforter une idée que l'on souhaite établir, alors que d’autres raisonnements sont possibles. Nous donnons une importance disproportionnée aux caractéristiques internes d’une personne ou d’un groupe, en évinçant la plupart des facteurs externes.`,
+            question: `332. Quel biais se fonde sur un renforcement d un précédent choix ?`,
+            options: [`A. Biais cognitif 1`, `B. Biais cognitif 2`, `C. Biais cognitif 3`, `D. Biais cognitif 4`],
+            correctIndex: 2,
+            explanation: `Le biais cognitif 3 décrit l'escalade de l'engagement, qui consiste à renforcer un choix antérieur malgré ses conséquences négatives.`
+        },
+        {
+            id: 333,
+            passage: `Graphique 1 | Graphique 2 | Graphique 3 | Graphique 4\n\n« Depuis les années 1970, l'effondrement du nombre d'unions officialisées s'est amorcé et n'a cessé de se poursuivre pendant plus de 20 ans. >>`,
+            question: `333. Quel graphique correspond au commentaire suivant ?`,
+            options: [`A. Graphique 1`, `B. Graphique 2`, `C. Graphique 3`, `D. Graphique 4`],
+            correctIndex: 0,
+            explanation: `Le graphique 1 est celui qui présente une diminution nette et durable du nombre d’unions à partir des années 1970, sans reprise significative pendant environ deux décennies.`
+        },
+        {
+            id: 334,
+            passage: `Bonjour,\n\nVous avez récemment demandé à modifier les conditions de fourniture d'électricité dans votre logement individuel. Avec votre nouveau compteur, cette intervention se fera à distance mardi 8 avril. Pour information, la mise à jour pourra être réalisée en dehors de nos plages d'ouverture, jusqu'à minuit.\n\nSi vous emménagez dans un nouveau logement et n'avez pas d'électricité, appuyez au moins 5 secondes sur la touche « + » de votre compteur. Vous pouvez aussi couper votre disjoncteur, puis après 5 secondes minimum, le remettre en position |.\n\nNous restons bien sûr à votre service.\nÀ très bientôt !`,
+            question: `334. Le client a récemment :`,
+            options: [`A. changé de contrat d'électricité`, `B. réinitialisé son compteur d'électricité`, `C. déménagé dans un autre logement`, `D. demandé l'intervention d'un technicien`],
+            correctIndex: 0,
+            explanation: `Le message indique que le client a demandé à modifier les conditions de fourniture d'électricité, ce qui correspond à un changement de contrat, et non à une intervention physique ou à un déménagement.`
+        },
+        {
+            id: 335,
+            passage: `Bonjour,\n\nVous avez récemment demandé à modifier les conditions de fourniture d'électricité dans votre logement individuel. Avec votre nouveau compteur, cette intervention se fera à distance mardi 8 avril. Pour information, la mise à jour pourra être réalisée en dehors de nos plages d'ouverture, jusqu'à minuit.\n\nSi vous emménagez dans un nouveau logement et n'avez pas d'électricité, appuyez au moins 5 secondes sur la touche « + » de votre compteur. Vous pouvez aussi couper votre disjoncteur, puis après 5 secondes minimum, le remettre en position |.\n\nNous restons bien sûr à votre service.\nÀ très bientôt !`,
+            question: `335. L'intervention demandée :`,
+            options: [`A. s'exécutera automatiquement par télétransmission`, `B. nécessitera la présence d'une personne majeure`, `C. se fera uniquement pendant les horaires d'ouverture`, `D. provoquera une coupure momentanée d'électricité`],
+            correctIndex: 0,
+            explanation: `Le texte précise que l'intervention « se fera à distance » et peut être réalisée « en dehors de nos plages d'ouverture », ce qui indique qu'elle s'exécute automatiquement par télétransmission, sans présence physique.`
+        },
+        {
+            id: 336,
+            passage: `Un laboratoire situé à l'université de Melbourne, en Australie, va bientôt toucher des fonds pour un projet important : restaurer le tigre de Tasmanie. Disparue dans le monde il y a environ 200 ans, cette espèce avait toutefois survécu jusqu'en 1936. La technique, basée sur le principe des biotechnologies, est complexe et encore incertaine. Une décennie sera probablement nécessaire avant que les chercheurs ne réussissent. Ce n'est cependant pas l'unique projet consistant à redonner vie à une espèce animale éteinte depuis longtemps.\n\nCertains scientifiques se posent la question légitime de l'intérêt d'investir de telles sommes dans ces recherches alors que de nombreuses espèces encore existantes sont elles-mêmes menacées de disparaître. L'argument qui revient le plus souvent est celui-ci : si les expériences visant à faire renaître certaines espèces de leurs cendres réussissent, ces découvertes pourront aider la communauté scientifique à protéger celles qui, elles, n’ont pas encore disparu.\n\n“Nous sommes à un moment décisif où nous pouvons développer des procédés techniques permettant de sauver une espèce de l'extinction et d'en sauvegarder d'autres en danger critique” explique dans un communiqué le directeur du nouveau laboratoire australien consacré à la renaissance du tigre de Tasmanie.`,
+            question: `336. Les recherches sur le tigre de Tasmanie :`,
+            options: [`A. manquent de financement suffisant`, `B. sont une première dans ce domaine`, `C. progressent lentement faute de personnel`, `D. soulèvent un débat parmi les chercheurs`],
+            correctIndex: 3,
+            explanation: `Le texte explique que certains scientifiques se demandent s’il est vraiment utile d'investir de grandes sommes dans la résurrection d'espèces disparues alors que d'autres espèces vivantes sont menacées. Cela montre qu'il existe un débat au sein de la communauté scientifique.`
+        },
+        {
+            id: 338,
+            passage: `Contrairement à sa réputation, la science-fiction est remarquablement réaliste. À sa façon. La preuve : bon nombre de ses rêves les plus fous se sont concrétisés, tout comme certains de ses cauchemars, comme le montre la dernière collection de Manière de voir.\n\nLe terme de « métavers », cher au patron de Facebook, vient directement d'un roman de Neal Stephenson (Le Samouraï virtuel, 1992), et l'idée même d'un monde virtuel apparaît dans Simulacre de Philip K. Dick dès 1964. Depuis 2019, l'armée française fait appel aux écrivains de science-fiction pour imaginer des confits futurs et les moyens de leur résolution. Face à l'extension de la surveillance et du contrôle, comme dans les meilleures dystopies, la science-fiction apparaît comme un genre sérieux.\n\nManière de voir propose ainsi de mesurer la puissance de déchiffrement de la réalité et sa force d'éveil. Selon un sondage récent, 74 % des Français ont le sentiment de vivre en pleine science-fiction. Entre la prolifération des puces, le rôle des algorithmes et les ambitions du transhumanisme, les extrapolations des écrivains sont devenues des éléments du quotidien.\n\nSi la science-fiction sait lire les possibles et parfois anticiper l'avenir, c’est par la force de son imaginaire. En ébranlant nos certitudes et en refusant le fatalisme, elle agit comme un puissant outil de réflexion sur le monde à venir.`,
+            question: `338. Paradoxalement, la science-fiction offre :`,
+            options: [`A. des arguments éthiques contre le progrès`, `B. un réenchantement de la vie quotidienne`, `C. un regard rassurant quant à l'avenir de l'humanité`, `D. des outils de connaissance prospective`],
+            correctIndex: 3,
+            explanation: `Le texte insiste sur la capacité de la science-fiction à anticiper les évolutions du monde réel et à aider à réfléchir aux futurs possibles, ce qui correspond à des outils de connaissance prospective.`
+        },
+        {
+            id: 340,
+            passage: `Deux personnes sont mortes et dix ont été blessées quand un véhicule a (1) le jardin d'une résidence lors d'une réception de mariage à West Vancouver. Une ambulance a été (2) sur les lieux, selon les Services de santé d'urgence de la Colombie-Britannique.`,
+            question: `340. Complétez la phrase (1) :`,
+            options: [`A. évité`, `B. traversé`, `C. bloqué`, `D. coupé`],
+            correctIndex: 1,
+            explanation: `Traversé convient ici, car le véhicule est passé à travers le jardin de la résidence lors de l'accident.`
+        },
+        {
+            id: 341,
+            passage: `Deux personnes sont mortes et dix ont été blessées quand un véhicule a (1) le jardin d'une résidence lors d'une réception de mariage à West Vancouver. Une ambulance a été (2) sur les lieux, selon les Services de santé d'urgence de la Colombie-Britannique.`,
+            question: `341. Complétez la phrase (2) :`,
+            options: [`A. envoyée`, `B. récupérée`, `C. accidentée`, `D. activée`],
+            correctIndex: 0,
+            explanation: `Envoyée est le bon choix, car une ambulance est dépêchée (envoyée) sur les lieux d'un accident pour porter secours.`
+        },
+        {
+            id: 342,
+            passage: `Événement 1\nDans le cadre de ses activités culturelles, la Fondation Mohammed VI organise jusqu'au 31 août, une exposition rétrospective intitulée << Culte >>. Elle rend hommage à 50 artistes qui ont marqué la photographie au XXe siècle\n\nÉvénement 2\nRendez-vous le 3 mai, pour l'inauguration de la collection Claudel au Musée Rodin de Paris. Au programme: discours d'ouverture par le directeur du musée, exposition des œuvres et présentation d'une sculpture inédite de Camille Claudel.\n\nÉvénement 3\nLes grandes marques partenaires invitent leurs fidèles clients à découvrir L'histoire de la chaussure » au Musée des arts et traditions populaires de Tunis. Une vente aux enchères aura lieu dans la soirée à destination de l'association Lacets d'enfants »\n\nÉvénement 4\nPour fêter son cinquantiéme anniversaire, l'artiste torontois Ayo met en lumière ses œuvres de jeunesse à la Steven Barcher Gallery. Le peintre décrira ses techniques à travers une exposition des plus modernes, Jeux de couleurs et d'odeurs laisseront sans voix les plus curieux.`,
+            question: `342. Quel événement est organisé par un artiste ?`,
+            options: [`A. Événement 1`, `B. Événement 2`, `C. Événement 3`, `D. Événement 4`],
+            correctIndex: 3,
+            explanation: `L'événement 4 est organisé par l'artiste Ayo, qui célèbre son cinquantième anniversaire, présente ses œuvres et explique ses techniques.`
+        }
+    ];
+
+    let currentMode = 'order'; // Modes: order, random, exam, review
+    let currentPool = [];
+    let currentIndex = 0;
+    let score = 0;
+    let totalAnswered = 0;
+    let mistakes = new Set();
+    let examAnswers = [];
+
+    function updateStats() {
+        if (currentMode === 'exam') return; 
+        let pct = totalAnswered === 0 ? 0 : Math.round((score / totalAnswered) * 100);
+        document.getElementById('stats-display').innerText = `Score: ${score} / ${totalAnswered} | Accuracy: ${pct}%`;
+        document.getElementById('question-counter').innerText = `Question ${currentIndex + 1} / ${currentPool.length}`;
+    }
+
+    function startMode(mode) {
+        currentMode = mode;
+        score = 0;
+        totalAnswered = 0;
+        currentIndex = 0;
+        examAnswers = [];
+        
+        document.getElementById('quiz-container').classList.remove('hidden');
+        document.getElementById('exam-summary').classList.add('hidden');
+
+        if (mode === 'order' || mode === 'exam') {
+            currentPool = [...questions];
+            if (mode === 'exam') {
+                document.getElementById('stats-display').innerText = "MODE EXAMEN (Réponses masquées jusqu'à la fin)";
+            }
+        } else if (mode === 'random') {
+            currentPool = [...questions].sort(() => Math.random() - 0.5);
+        } else if (mode === 'review') {
+            currentPool = questions.filter(q => mistakes.has(q.id));
+            if (currentPool.length === 0) {
+                alert("Bravo ! Aucune erreur à réviser. / No mistakes to review!");
+                startMode('order');
+                return;
+            }
+        }
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if (currentIndex >= currentPool.length) {
+            if (currentMode === 'exam') showExamSummary();
+            return;
+        }
+
+        const q = currentPool[currentIndex];
+        document.getElementById('passage-text').innerText = q.passage;
+        document.getElementById('question-text').innerText = q.question;
+        document.getElementById('explanation-container').style.display = 'none';
+        
+        const optsContainer = document.getElementById('options-container');
+        optsContainer.innerHTML = '';
+        
+        q.options.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => selectAnswer(idx, btn);
+            optsContainer.appendChild(btn);
+        });
+
+        document.getElementById('next-btn').classList.add('hidden');
+        document.getElementById('prev-btn').classList.toggle('hidden', currentIndex === 0 || currentMode === 'exam');
+        updateStats();
+    }
+
+    function selectAnswer(selectedIndex, btnNode) {
+        const q = currentPool[currentIndex];
+        const optsContainer = document.getElementById('options-container');
+        const buttons = optsContainer.getElementsByTagName('button');
+        
+        for (let b of buttons) b.disabled = true;
+
+        if (currentMode === 'exam') {
+            examAnswers.push({ id: q.id, selected: selectedIndex, correct: q.correctIndex });
+            btnNode.style.borderColor = "var(--text)";
+            document.getElementById('next-btn').classList.remove('hidden');
+            return;
+        }
+
+        totalAnswered++;
+        const isCorrect = (selectedIndex === q.correctIndex);
+        
+        if (isCorrect) {
+            score++;
+            btnNode.classList.add('correct');
+            document.getElementById('verdict-title').innerText = "✓ Correct";
+            document.getElementById('verdict-title').style.color = "var(--correct)";
+            if(currentMode === 'review') mistakes.delete(q.id); 
+        } else {
+            btnNode.classList.add('incorrect');
+            buttons[q.correctIndex].classList.add('correct');
+            document.getElementById('verdict-title').innerText = "✗ Incorrect";
+            document.getElementById('verdict-title').style.color = "var(--incorrect)";
+            mistakes.add(q.id);
+        }
+
+        document.getElementById('explanation-text').innerHTML = q.explanation.replace(/\n/g, '<br>');
+        
+        document.getElementById('explanation-container').style.display = 'block';
+        document.getElementById('next-btn').classList.remove('hidden');
+        updateStats();
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        loadQuestion();
+    }
+
+    function prevQuestion() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            loadQuestion();
+        }
+    }
+
+    function showExamSummary() {
+        document.getElementById('quiz-container').classList.add('hidden');
+        document.getElementById('exam-summary').classList.remove('hidden');
+        
+        let correctCount = examAnswers.filter(a => a.selected === a.correct).length;
+        let pct = Math.round((correctCount / examAnswers.length) * 100);
+        
+        examAnswers.forEach(a => { if(a.selected !== a.correct) mistakes.add(a.id); });
+        
+        document.getElementById('exam-results').innerHTML = `
+            Score total: ${correctCount} / ${examAnswers.length}<br>
+            Pourcentage: ${pct}%<br>
+            Réponses incorrectes enregistrées: ${examAnswers.length - correctCount}
+        `;
+        document.getElementById('stats-display').innerText = `Examen terminé - ${pct}%`;
+    }
+
+    // Lancement de l'application
+    window.onload = () => startMode('order');
+</script>
+</body>
+</html>
